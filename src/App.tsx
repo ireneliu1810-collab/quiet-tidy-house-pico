@@ -301,10 +301,11 @@ function WateringIllustration({ progress }: { progress: number }) {
       </g>
 
       <g className="water-drawing" style={{ opacity: waterOpacity }}>
-        <path d="M359 92 C399 109 449 139 498 164" fill="none" stroke="url(#waterLine)" strokeWidth="5" strokeLinecap="round"/>
-        <circle cx="412" cy="119" r="3" fill="#c7e5e1" opacity=".75"/>
-        <circle cx="459" cy="147" r="2.5" fill="#d8ece9" opacity=".82"/>
-        <path d="M498 158 C505 166 504 174 498 178 C491 174 490 166 498 158Z" fill="#c2e2de"/>
+        <path className="water-stream" d="M359 93 C402 95 446 108 476 135 C490 147 498 158 500 166" fill="none" stroke="url(#waterLine)" strokeWidth="3.4" strokeLinecap="round"/>
+        <ellipse cx="405" cy="102" rx="2.2" ry="4.2" fill="#c7e5e1" opacity=".7" transform="rotate(-64 405 102)"/>
+        <ellipse cx="454" cy="121" rx="2.3" ry="4.6" fill="#d8ece9" opacity=".78" transform="rotate(-48 454 121)"/>
+        <ellipse cx="484" cy="145" rx="2.5" ry="5" fill="#c7e5e1" opacity=".82" transform="rotate(-31 484 145)"/>
+        <path d="M500 158 C505 166 504 173 500 177 C495 173 494 166 500 158Z" fill="#c2e2de"/>
       </g>
     </svg>
   )
