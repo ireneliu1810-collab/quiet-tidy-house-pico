@@ -534,9 +534,9 @@ export class QuietRoom {
 
   private buildBeanbag() {
     const beanbag = new THREE.Group()
-    beanbag.position.set(-3.55, .08, -.85)
-    beanbag.rotation.y = .16
-    beanbag.scale.setScalar(1.12)
+    beanbag.position.set(-5.35, .08, -1.45)
+    beanbag.rotation.y = .12
+    beanbag.scale.setScalar(1.08)
     this.scene.add(beanbag)
 
     const fabric = new THREE.MeshStandardMaterial({ color: 0x7f7b61, roughness: .99, metalness: .01, side: THREE.DoubleSide })
@@ -570,13 +570,24 @@ export class QuietRoom {
     rim.castShadow = true
     beanbag.add(rim)
 
-    // Raise the rear half into the enveloping nest silhouette from the reference,
-    // while the lower ring stays soft enough to step into from the front.
-    const rearBolster = new THREE.Mesh(new THREE.TorusGeometry(.92, .31, 24, 64, Math.PI), fabric)
-    rearBolster.position.set(0, .72, -.26)
-    rearBolster.scale.x = 1.12
-    rearBolster.castShadow = true
-    beanbag.add(rearBolster)
+    // A buried U-shaped bolster keeps a soft continuous outline without the
+    // exposed flat ends or the round-ball silhouette of the previous versions.
+    const backCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-.7, .64, -.52),
+      new THREE.Vector3(-.64, 1.25, -.55),
+      new THREE.Vector3(0, 1.57, -.58),
+      new THREE.Vector3(.64, 1.25, -.55),
+      new THREE.Vector3(.7, .64, -.52),
+    ])
+    const backBolster = new THREE.Mesh(new THREE.TubeGeometry(backCurve, 56, .28, 20, false), fabric)
+    backBolster.castShadow = true
+    beanbag.add(backBolster)
+
+    const innerBack = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 28), fabricDark)
+    innerBack.position.set(0, 1.02, -.5)
+    innerBack.scale.set(.72, .54, .12)
+    innerBack.receiveShadow = true
+    beanbag.add(innerBack)
 
     const seat = new THREE.Mesh(new THREE.SphereGeometry(1, 56, 28), fabricDark)
     seat.scale.set(.73, .15, .68)
@@ -597,9 +608,9 @@ export class QuietRoom {
       beanbag.add(seam)
     }
 
-    const pillow = new THREE.Mesh(new RoundedBoxGeometry(.96, .72, .24, 5, .18), this.material(0x74756f, .98, .01))
-    pillow.position.set(.03, 1.34, -.02)
-    pillow.rotation.set(-.08, .04, .08)
+    const pillow = new THREE.Mesh(new RoundedBoxGeometry(.9, .68, .22, 5, .17), this.material(0x74756f, .98, .01))
+    pillow.position.set(.03, 1.4, .42)
+    pillow.rotation.set(-.22, .04, .06)
     pillow.castShadow = true
     beanbag.add(pillow)
 

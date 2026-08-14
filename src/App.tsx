@@ -1,16 +1,19 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Spatial } from '@webspatial/core-sdk'
 import { QuietRoom, type ActivityId, type RoomEvent } from './room'
 import catSleepUrl from './assets/cat-sleep-v2.png'
 
-const activities: Array<{ id: ActivityId; icon: string; title: string; hint: string; number: string }> = [
+const ClockIcon = () => <svg className="activity-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5h4"/><path d="M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg>
+const PawIcon = () => <svg className="activity-icon paw-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="15.4" rx="5.8" ry="4.6"/><ellipse cx="5.4" cy="10.1" rx="2.1" ry="2.8" transform="rotate(-24 5.4 10.1)"/><ellipse cx="9.5" cy="6.4" rx="2.1" ry="2.8" transform="rotate(-8 9.5 6.4)"/><ellipse cx="14.7" cy="6.4" rx="2.1" ry="2.8" transform="rotate(8 14.7 6.4)"/><ellipse cx="18.8" cy="10.1" rx="2.1" ry="2.8" transform="rotate(24 18.8 10.1)"/></svg>
+
+const activities: Array<{ id: ActivityId; icon: ReactNode; title: string; hint: string; number: string }> = [
   { id: 'shelf', icon: '▥', title: '整理书架', hint: '纸页与木格', number: '01' },
-  { id: 'repair', icon: '◷', title: '修复旧钟', hint: '齿轮与黄铜', number: '02' },
+  { id: 'repair', icon: <ClockIcon/>, title: '修复旧钟', hint: '齿轮与黄铜', number: '02' },
   { id: 'water', icon: '♧', title: '给植物浇水', hint: '水珠与陶土', number: '03' },
   { id: 'record', icon: '◎', title: '擦拭唱片', hint: '唱片架与绒布', number: '04' },
   { id: 'collection', icon: '◇', title: '摆放收藏', hint: '陶瓷与木头', number: '05' },
   { id: 'desk', icon: '▱', title: '收拾桌面', hint: '旧纸与留白', number: '06' },
-  { id: 'cat', icon: '🐾', title: '抚摸小猫', hint: '绒毛与呼噜', number: '07' },
+  { id: 'cat', icon: <PawIcon/>, title: '抚摸小猫', hint: '绒毛与呼噜', number: '07' },
 ]
 
 const events: Record<ActivityId, RoomEvent> = {
