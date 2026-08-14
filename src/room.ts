@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { MusicSoundscape } from './soundscape'
+import catAwakeUrl from './assets/cat-awake-v2.png'
+import catSleepUrl from './assets/cat-sleep-v2.png'
 
 export type ActivityId = 'shelf' | 'repair' | 'water' | 'record' | 'collection' | 'desk' | 'cat'
 
@@ -49,10 +51,8 @@ export class QuietRoom {
   private rain: THREE.Object3D[] = []
   private lampGlow: THREE.Mesh | null = null
   private catVisual: THREE.Group | null = null
-  private catTail: THREE.Group | null = null
-  private catHead: THREE.Group | null = null
-  private catAwakeEyes: THREE.Group | null = null
-  private catSleepEyes: THREE.Group | null = null
+  private catAwake: THREE.Mesh | null = null
+  private catSleep: THREE.Mesh | null = null
   private catAwakeUntil = 0
 
   constructor(private canvas: HTMLCanvasElement, private onRequest: (id: ActivityId) => void) {
@@ -533,170 +533,48 @@ export class QuietRoom {
 
   private buildCat() {
     const cat = new THREE.Group()
-    cat.position.set(2.8, 1.16, 1.62)
-    cat.rotation.y = .44
+    cat.position.set(2.8, 1.13, 1.58)
+    cat.rotation.y = .63
     this.scene.add(cat)
 
     const visual = new THREE.Group()
     cat.add(visual)
     this.catVisual = visual
 
-    const ginger = this.material(0xd28a58, .92)
-    const gingerDark = this.material(0x9c5d42, .94)
-    const cream = this.material(0xf0d9bc, .98)
-    const pink = this.material(0xd98e85, .94)
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(.62, 48),
+      new THREE.MeshBasicMaterial({ color: 0x17201c, transparent: true, opacity: .2, depthWrite: false }),
+    )
+    shadow.rotation.x = -Math.PI / 2
+    shadow.scale.y = .42
+    shadow.position.set(.02, .025, .02)
+    visual.add(shadow)
 
-    // Compact pear-shaped body keeps the kitten proportions close to the reference.
-    const body = new THREE.Mesh(new THREE.SphereGeometry(.46, 36, 26), ginger)
-    body.scale.set(.72, 1.02, .68)
-    body.position.set(0, .48, 0)
-    body.castShadow = true
-    visual.add(body)
-
-    const chest = new THREE.Mesh(new THREE.SphereGeometry(.34, 30, 22), cream)
-    chest.scale.set(.57, .92, .18)
-    chest.position.set(0, .43, .39)
-    visual.add(chest)
-
-    for (const side of [-1, 1]) {
-      const haunch = new THREE.Mesh(new THREE.SphereGeometry(.27, 28, 20), gingerDark)
-      haunch.scale.set(.9, .78, .86)
-      haunch.position.set(side * .27, .24, -.02)
-      haunch.castShadow = true
-      visual.add(haunch)
-    }
-
-    const head = new THREE.Group()
-    head.position.set(0, 1.02, .09)
-    visual.add(head)
-    this.catHead = head
-
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(.48, 40, 30), ginger)
-    skull.scale.set(1.06, .92, .88)
-    skull.castShadow = true
-    head.add(skull)
-
-    for (const side of [-1, 1]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(.205, .36, 3), ginger)
-      ear.position.set(side * .31, .42, -.015)
-      ear.rotation.z = side * -.12
-      ear.castShadow = true
-      head.add(ear)
-      const inner = new THREE.Mesh(new THREE.ConeGeometry(.12, .225, 3), pink)
-      inner.position.set(side * .31, .425, .08)
-      inner.rotation.z = side * -.12
-      head.add(inner)
-    }
-
-    // A continuous ivory blaze and paired muzzle form the orange-and-white face.
-    const blaze = new THREE.Mesh(new THREE.SphereGeometry(.255, 28, 20), cream)
-    blaze.scale.set(.72, 1.42, .2)
-    blaze.position.set(0, .035, .423)
-    head.add(blaze)
-    for (const side of [-1, 1]) {
-      const muzzle = new THREE.Mesh(new THREE.SphereGeometry(.14, 24, 18), cream)
-      muzzle.scale.set(1.05, .76, .55)
-      muzzle.position.set(side * .105, -.17, .438)
-      head.add(muzzle)
-    }
-
-    const awakeEyes = new THREE.Group()
-    const sleepEyes = new THREE.Group()
-    head.add(awakeEyes, sleepEyes)
-    this.catAwakeEyes = awakeEyes
-    this.catSleepEyes = sleepEyes
-    awakeEyes.visible = false
-
-    for (const side of [-1, 1]) {
-      const eyeRim = new THREE.Mesh(new THREE.SphereGeometry(.17, 28, 20), this.material(0x8d653e, .35, .18))
-      eyeRim.scale.set(.9, 1.08, .2)
-      eyeRim.position.set(side * .205, .075, .43)
-      awakeEyes.add(eyeRim)
-      const iris = new THREE.Mesh(new THREE.SphereGeometry(.142, 28, 20), this.material(0x302a29, .22, .16))
-      iris.scale.set(.9, 1.08, .22)
-      iris.position.set(side * .205, .075, .466)
-      awakeEyes.add(iris)
-      const highlight = new THREE.Mesh(new THREE.SphereGeometry(.038, 18, 12), new THREE.MeshBasicMaterial({ color: 0xfff8e9 }))
-      highlight.scale.set(1, 1.18, .6)
-      highlight.position.set(side * .205 - .035, .125, .578)
-      awakeEyes.add(highlight)
-      const glint = new THREE.Mesh(new THREE.SphereGeometry(.014, 12, 8), new THREE.MeshBasicMaterial({ color: 0xd7cab8 }))
-      glint.position.set(side * .205 + .045, .01, .584)
-      awakeEyes.add(glint)
-
-      const eyelid = this.rounded([.205, .025, .018], 0x3a2c27, [side * .205, .065, .48], .011, .58, .02, sleepEyes)
-      eyelid.rotation.z = side * -.13
-    }
-
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(.045, 18, 14), pink)
-    nose.scale.set(1.15, .78, .68)
-    nose.position.set(0, -.145, .548)
-    head.add(nose)
-
-    const mouthMaterial = new THREE.LineBasicMaterial({ color: 0x725048, transparent: true, opacity: .78 })
-    for (const side of [-1, 1]) {
-      const mouth = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(0, -.175, .55),
-          new THREE.Vector3(side * .065, -.225, .53),
-        ]),
-        mouthMaterial,
+    const textureLoader = new THREE.TextureLoader()
+    const makeCharacter = (url: string) => {
+      const texture = textureLoader.load(url)
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
+      const character = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.7, 1.7),
+        new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          alphaTest: .025,
+          depthWrite: true,
+          side: THREE.DoubleSide,
+          toneMapped: true,
+        }),
       )
-      head.add(mouth)
+      character.position.set(0, .84, .035)
+      character.renderOrder = 3
+      visual.add(character)
+      return character
     }
 
-    const whiskerMaterial = new THREE.LineBasicMaterial({ color: 0xe7d9c4, transparent: true, opacity: .8 })
-    for (const side of [-1, 1]) {
-      for (let i = -1; i <= 1; i++) {
-        const whisker = new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(side * .13, -.17 + i * .035, .5),
-            new THREE.Vector3(side * (.5 + Math.abs(i) * .03), -.18 + i * .075, .49),
-          ]),
-          whiskerMaterial,
-        )
-        head.add(whisker)
-      }
-    }
-
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(.31, .026, 8, 36), this.material(0x688576, .68, .08))
-    collar.rotation.x = Math.PI / 2
-    collar.position.set(0, .73, .075)
-    visual.add(collar)
-    const bell = new THREE.Mesh(new THREE.SphereGeometry(.055, 18, 14), this.material(colors.brass, .3, .68))
-    bell.position.set(0, .69, .38)
-    visual.add(bell)
-
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 18), cream)
-      leg.scale.set(.76, 1.28, .72)
-      leg.position.set(side * .17, .22, .29)
-      leg.castShadow = true
-      visual.add(leg)
-      const paw = new THREE.Mesh(new THREE.SphereGeometry(.15, 24, 18), cream)
-      paw.scale.set(1.05, .55, 1.12)
-      paw.position.set(side * .18, .08, .37)
-      paw.castShadow = true
-      visual.add(paw)
-      for (const toeOffset of [-.045, .045]) {
-        const toe = this.rounded([.012, .055, .012], 0xb88e79, [side * .18 + toeOffset, .085, .505], .006, .88, .01, visual)
-        toe.rotation.x = .2
-      }
-    }
-
-    const tailGroup = new THREE.Group()
-    visual.add(tailGroup)
-    this.catTail = tailGroup
-    const tailCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.27, .3, -.12),
-      new THREE.Vector3(.55, .24, -.08),
-      new THREE.Vector3(.75, .42, -.01),
-      new THREE.Vector3(.72, .72, .04),
-      new THREE.Vector3(.55, .82, .12),
-    ])
-    const tail = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 32, .105, 12, false), ginger)
-    tail.castShadow = true
-    tailGroup.add(tail)
+    this.catSleep = makeCharacter(catSleepUrl)
+    this.catAwake = makeCharacter(catAwakeUrl)
+    this.catAwake.visible = false
 
     this.addInteractive('cat', cat)
   }
@@ -858,10 +736,8 @@ export class QuietRoom {
       this.catVisual.scale.set(1, breathing, 1)
     }
     const catAwake = performance.now() < this.catAwakeUntil
-    if (this.catAwakeEyes) this.catAwakeEyes.visible = catAwake
-    if (this.catSleepEyes) this.catSleepEyes.visible = !catAwake
-    if (this.catTail) this.catTail.rotation.y = Math.sin(elapsed * .72) * .025
-    if (this.catHead) this.catHead.rotation.z = this.active?.id === 'cat' ? Math.sin(elapsed * 5.2) * .025 : 0
+    if (this.catAwake) this.catAwake.visible = catAwake
+    if (this.catSleep) this.catSleep.visible = !catAwake
     if (this.active) {
       const t = Math.min(1, (performance.now() - this.activeStarted) / 1150)
       const pulse = Math.sin(t * Math.PI)
