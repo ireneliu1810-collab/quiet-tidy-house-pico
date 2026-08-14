@@ -13,7 +13,7 @@ type Interactive = {
   id: ActivityId
   mesh: THREE.Object3D
   rest: THREE.Vector3
-  phase: number
+  rotation: THREE.Euler
 }
 
 const palette = {
@@ -36,7 +36,7 @@ export class QuietRoom {
   private frame = 0
   private soundscape = new MusicSoundscape()
 
-  constructor(private canvas: HTMLCanvasElement, private onActivity: (event: RoomEvent) => void) {
+  constructor(private canvas: HTMLCanvasElement, private onRequest: (id: ActivityId) => void) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6))
     this.renderer.shadowMap.enabled = true
@@ -95,13 +95,20 @@ export class QuietRoom {
     this.box([.25, 8, 22], 0x4a5c52, [-9, 4, -2])
     this.box([.25, 8, 22], 0x52655a, [9, 4, -2])
 
-    // Window and rain-lit evening outside.
-    this.box([4.5, 3.1, .14], 0x1c2a2a, [4.6, 4.7, -7.78], .25)
-    for (const x of [2.45, 4.6, 6.75]) this.box([.07, 3.1, .12], palette.paleWood, [x, 4.7, -7.6])
-    for (let i = 0; i < 34; i++) {
-      const rain = new THREE.Mesh(new THREE.BoxGeometry(.018, .28 + Math.random() * .38, .01), new THREE.MeshBasicMaterial({ color: 0xb9d6d2, transparent: true, opacity: .38 }))
-      rain.position.set(2.55 + Math.random() * 4.05, 3.25 + Math.random() * 2.9, -7.5)
+    // Deep blue window glass and layered diagonal rain establish an outside world.
+    this.box([4.7, 3.25, .14], 0x213b40, [4.6, 4.7, -7.78], .3)
+    const distantGlow = new THREE.Mesh(new THREE.CircleGeometry(.32, 24), new THREE.MeshBasicMaterial({ color: 0x829d92, transparent: true, opacity: .24 }))
+    distantGlow.position.set(5.75, 5.38, -7.64)
+    this.scene.add(distantGlow)
+    for (const x of [2.28, 4.6, 6.92]) this.box([.09, 3.38, .13], palette.paleWood, [x, 4.7, -7.57])
+    for (const y of [3.1, 6.3]) this.box([4.82, .09, .13], palette.paleWood, [4.6, y, -7.57])
+    for (let i = 0; i < 72; i++) {
+      const length = .18 + Math.random() * .52
+      const rain = new THREE.Mesh(new THREE.BoxGeometry(.014, length, .012), new THREE.MeshBasicMaterial({ color: i % 5 ? 0xb9d8d2 : 0xe1eee6, transparent: true, opacity: .18 + Math.random() * .38 }))
+      rain.position.set(2.35 + Math.random() * 4.5, 3.15 + Math.random() * 3.05, -7.47)
+      rain.rotation.z = -.16
       rain.userData.rain = true
+      rain.userData.speed = .012 + Math.random() * .018
       this.scene.add(rain)
     }
 
@@ -127,12 +134,12 @@ export class QuietRoom {
     // Desk, record, repair object and scattered paper.
     this.box([7.6, .32, 3.2], palette.paleWood, [0, 1.45, -2.6], .8)
     for (const x of [-3.3, 3.3]) for (const z of [-3.7, -1.5]) this.box([.25, 1.5, .25], palette.wood, [x, .72, z])
-    const record = new THREE.Mesh(new THREE.CylinderGeometry(.78, .78, .055, 64), this.mat(0x161919, .25, .2))
-    record.rotation.x = Math.PI / 2
-    record.position.set(2.25, 1.68, -2.8)
+    const recordMat = new THREE.MeshPhysicalMaterial({ color: 0x121616, roughness: .18, metalness: .12, clearcoat: .72, clearcoatRoughness: .2 })
+    const record = new THREE.Mesh(new THREE.CylinderGeometry(.78, .78, .055, 64), recordMat)
+    record.position.set(2.25, 1.655, -2.8)
     record.castShadow = true
     const recordLabel = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .062, 32), this.mat(0xc28b63, .65))
-    recordLabel.rotation.x = Math.PI / 2
+    recordLabel.position.y = .012
     record.add(recordLabel)
     this.scene.add(record)
     this.addInteractive('record', record)
@@ -142,9 +149,30 @@ export class QuietRoom {
     body.rotation.x = Math.PI / 2
     const face = new THREE.Mesh(new THREE.CylinderGeometry(.39, .39, .185, 32), this.mat(palette.cream, .85))
     face.rotation.x = Math.PI / 2
-    clock.add(body, face)
-    clock.position.set(-2.5, 1.77, -2.65)
-    clock.rotation.z = -.12
+    const handMat = this.mat(0x2b302c, .5, .3)
+    const hourHand = new THREE.Mesh(new THREE.BoxGeometry(.055, .25, .025), handMat)
+    hourHand.position.set(-.055, .055, .115)
+    hourHand.rotation.z = .45
+    const minuteHand = new THREE.Mesh(new THREE.BoxGeometry(.045, .32, .025), handMat)
+    minuteHand.position.set(.07, .08, .118)
+    minuteHand.rotation.z = -1.0
+    const centerPin = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), this.mat(palette.brass, .28, .72))
+    centerPin.position.z = .145
+    clock.add(body, face, hourHand, minuteHand, centerPin)
+    for (const side of [-1, 1]) {
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(.22, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), this.mat(palette.brass, .28, .72))
+      bell.position.set(side * .34, .43, 0)
+      bell.rotation.z = side * -.35
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, .2, 12), this.mat(palette.brass, .32, .65))
+      foot.position.set(side * .27, -.45, 0)
+      foot.rotation.z = side * -.18
+      clock.add(bell, foot)
+    }
+    const winder = new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .15, 14), this.mat(0x544333, .45, .45))
+    winder.position.set(.53, 0, 0)
+    winder.rotation.z = Math.PI / 2
+    clock.add(winder)
+    clock.position.set(-2.5, 2.11, -2.65)
     this.scene.add(clock)
     this.addInteractive('repair', clock)
 
@@ -159,24 +187,38 @@ export class QuietRoom {
     this.scene.add(papers)
     this.addInteractive('desk', papers)
 
-    // Plant with a warm clay pot.
+    // Plant with visible stems and paired leaves rather than a stack of blobs.
     const plant = new THREE.Group()
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(.58, .44, .88, 32), this.mat(palette.clay, .88))
     pot.position.y = .44
-    plant.add(pot)
-    for (let i = 0; i < 12; i++) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(.18, 12, 8), this.mat(i % 3 ? palette.leaf : palette.moss, .92))
-      const angle = i * 2.4
-      leaf.scale.set(.75, 2.3, .42)
-      leaf.rotation.z = Math.sin(angle) * .65
-      leaf.position.set(Math.sin(angle) * (.3 + i * .018), .95 + i * .11, Math.cos(angle) * .3)
-      plant.add(leaf)
+    const soil = new THREE.Mesh(new THREE.CylinderGeometry(.48, .48, .035, 28), this.mat(0x3c2b20, .98))
+    soil.position.y = .875
+    plant.add(pot, soil)
+    const leafMaterial = this.mat(palette.leaf, .78)
+    const lightLeafMaterial = this.mat(palette.moss, .82)
+    const stemMaterial = this.mat(0x476648, .85)
+    for (let i = 0; i < 7; i++) {
+      const angle = -.9 + i * .3
+      const height = 1.0 + (i % 3) * .18
+      const end = new THREE.Vector3(Math.sin(angle) * (.28 + i * .025), .88 + height, Math.cos(angle) * .24)
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, .84, 0), new THREE.Vector3(end.x * .45, 1.25, end.z * .45), end])
+      const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, .025, 7, false), stemMaterial)
+      plant.add(stem)
+      for (const side of [-1, 1]) {
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 10), (i + side) % 2 ? leafMaterial : lightLeafMaterial)
+        leaf.scale.set(1.25, .32, .58)
+        leaf.position.set(end.x + side * .2, end.y - .08 + side * .1, end.z + side * .04)
+        leaf.rotation.z = side * (.45 + i * .035)
+        leaf.rotation.y = angle
+        plant.add(leaf)
+      }
     }
     plant.position.set(5.7, .03, -5.7)
     this.scene.add(plant)
     this.addInteractive('water', plant)
 
     // Collection niche with tactile ceramic and wood objects.
+    this.box([2.9, .17, .82], palette.wood, [7.55, 2.36, -7.05], .82)
     const collection = new THREE.Group()
     const shapes: THREE.BufferGeometry[] = [new THREE.SphereGeometry(.36, 24, 18), new THREE.ConeGeometry(.34, .72, 24), new THREE.DodecahedronGeometry(.38)]
     shapes.forEach((geometry, index) => {
@@ -185,7 +227,8 @@ export class QuietRoom {
       object.castShadow = true
       collection.add(object)
     })
-    collection.position.set(5.4, 1.5, -2.4)
+    collection.scale.setScalar(.78)
+    collection.position.set(7.55, 2.48, -6.62)
     this.scene.add(collection)
     this.addInteractive('collection', collection)
 
@@ -203,7 +246,7 @@ export class QuietRoom {
 
   private addInteractive(id: ActivityId, mesh: THREE.Object3D) {
     mesh.traverse(child => { child.userData.activity = id })
-    this.interactives.push({ id, mesh, rest: mesh.position.clone(), phase: Math.random() * Math.PI * 2 })
+    this.interactives.push({ id, mesh, rest: mesh.position.clone(), rotation: mesh.rotation.clone() })
   }
 
   private bind() {
@@ -227,22 +270,13 @@ export class QuietRoom {
     }
   }
 
-  private onPointerDown = () => { if (this.hovered) this.activate(this.hovered) }
+  private onPointerDown = () => { if (this.hovered) this.onRequest(this.hovered.id) }
 
   private activate(item: Interactive) {
     this.active = item
     this.activeStarted = performance.now()
-    const copy: Record<ActivityId, RoomEvent> = {
-      shelf: { id: 'shelf', label: '书脊轻轻归位', detail: '木格与纸页发出柔和的沙沙声。' },
-      repair: { id: 'repair', label: '旧钟重新呼吸', detail: '小齿轮传来干净而克制的咔嗒声。' },
-      water: { id: 'water', label: '叶片接住水珠', detail: '慢一点，听水落进陶土里的声音。' },
-      record: { id: 'record', label: '唱片擦拭完成', detail: '细微底噪变得温暖、均匀。' },
-      collection: { id: 'collection', label: '收藏品找到位置', detail: '陶瓷、木头与金属各自安静下来。' },
-      desk: { id: 'desk', label: '桌面留出空白', detail: '纸张的边缘被轻轻理齐。' },
-    }
     void this.soundscape.interaction(item.id)
     navigator.vibrate?.(item.id === 'water' ? [18, 32, 14] : [20])
-    this.onActivity(copy[item.id])
   }
 
   private animate = () => {
@@ -250,22 +284,25 @@ export class QuietRoom {
     const elapsed = this.clock.getElapsedTime()
     this.scene.traverse(object => {
       if (object.userData.rain) {
-        object.position.y -= .013
-        if (object.position.y < 3.2) object.position.y = 6.15
+        object.position.y -= object.userData.speed as number
+        object.position.x -= (object.userData.speed as number) * .16
+        if (object.position.y < 3.08) {
+          object.position.y = 6.25
+          object.position.x = 2.35 + Math.random() * 4.5
+        }
       }
-    })
-    this.interactives.forEach(item => {
-      if (item !== this.active) item.mesh.position.y = item.rest.y + Math.sin(elapsed * .55 + item.phase) * .006
     })
     if (this.active) {
       const t = Math.min(1, (performance.now() - this.activeStarted) / 1100)
       const pulse = Math.sin(t * Math.PI)
       const mesh = this.active.mesh
       mesh.position.y = this.active.rest.y + pulse * .16
-      mesh.rotation.y += .012 * pulse
-      if (this.active.id === 'record') mesh.rotation.z += .04
+      if (this.active.id === 'record') mesh.rotation.y = this.active.rotation.y + t * Math.PI * 2
+      else if (this.active.id === 'repair') mesh.rotation.z = this.active.rotation.z + Math.sin(t * Math.PI * 4) * .04
+      else mesh.rotation.y = this.active.rotation.y + pulse * .08
       if (t >= 1) {
         mesh.position.copy(this.active.rest)
+        mesh.rotation.copy(this.active.rotation)
         mesh.scale.setScalar(this.hovered === this.active ? 1.035 : 1)
         this.active = null
       }

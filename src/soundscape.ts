@@ -80,12 +80,13 @@ export class MusicSoundscape {
 
   async setAmbient(enabled: boolean) {
     const context = this.ensure()
-    await context.resume()
     this.enabled = enabled
+    await context.resume()
+    if (this.enabled !== enabled) return
     const now = context.currentTime
     this.ambient!.gain.cancelScheduledValues(now)
-    this.ambient!.gain.setValueAtTime(Math.max(.0001, this.ambient!.gain.value), now)
-    this.ambient!.gain.exponentialRampToValueAtTime(enabled ? .82 : .0001, now + (enabled ? 1.8 : .7))
+    this.ambient!.gain.setValueAtTime(this.ambient!.gain.value, now)
+    this.ambient!.gain.linearRampToValueAtTime(enabled ? .82 : 0, now + (enabled ? 1.2 : .08))
     if (enabled) {
       this.scheduleChord()
       window.clearInterval(this.sequenceTimer)
