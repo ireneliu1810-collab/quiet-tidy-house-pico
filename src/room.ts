@@ -620,6 +620,7 @@ export class QuietRoom {
     const cat = new THREE.Group()
     cat.position.set(2.8, 1.13, 1.58)
     cat.rotation.y = .63
+    cat.scale.setScalar(.82)
     this.scene.add(cat)
 
     const visual = new THREE.Group()
