@@ -1,0 +1,30 @@
+{
+  "name": "quiet-tidy-house-pico-webspatial",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5190 --strictPort",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint src",
+    "check": "npm run build && npm run lint",
+    "preview": "vite preview --host 127.0.0.1 --port 5190 --strictPort"
+  },
+  "dependencies": {
+    "@webspatial/core-sdk": "1.7.0",
+    "@webspatial/react-sdk": "1.7.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.177.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.177.0",
+    "@vitejs/plugin-react": "6.0.4",
+    "oxlint": "1.75.0",
+    "typescript": "6.0.2",
+    "vite": "8.2.0"
+  }
+}
