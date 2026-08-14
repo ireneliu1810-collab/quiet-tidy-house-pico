@@ -534,74 +534,74 @@ export class QuietRoom {
 
   private buildBeanbag() {
     const beanbag = new THREE.Group()
-    beanbag.position.set(4.8, .08, -1.55)
-    beanbag.rotation.y = -.28
+    beanbag.position.set(-3.55, .08, -.85)
+    beanbag.rotation.y = .16
+    beanbag.scale.setScalar(1.12)
     this.scene.add(beanbag)
 
-    const makeLobedGeometry = () => {
-      const geometry = new THREE.SphereGeometry(1, 56, 36)
-      const positions = geometry.getAttribute('position') as THREE.BufferAttribute
-      for (let index = 0; index < positions.count; index++) {
-        const x = positions.getX(index)
-        const y = positions.getY(index)
-        const z = positions.getZ(index)
-        const around = Math.atan2(z, x)
-        const lobe = 1 + Math.cos(around * 7) * .026 * (1 - Math.abs(y))
-        positions.setXYZ(index, x * lobe, y, z * lobe)
-      }
-      geometry.computeVertexNormals()
-      return geometry
-    }
-
-    const fabric = this.material(0x887562, .98, .01)
-    const fabricLight = this.material(0x94806b, .99, .01)
-    const fabricDark = this.material(0x66594d, .99, .01)
-    const lobeGeometry = makeLobedGeometry()
+    const fabric = new THREE.MeshStandardMaterial({ color: 0x7f7b61, roughness: .99, metalness: .01, side: THREE.DoubleSide })
+    const fabricDark = this.material(0x56594c, .99, .01)
 
     const shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(1.2, 64),
+      new THREE.CircleGeometry(1.32, 72),
       new THREE.MeshBasicMaterial({ color: 0x18201c, transparent: true, opacity: .24, depthWrite: false }),
     )
     shadow.rotation.x = -Math.PI / 2
-    shadow.scale.y = .76
+    shadow.scale.y = .82
     shadow.position.y = .04
     beanbag.add(shadow)
 
-    const base = new THREE.Mesh(lobeGeometry, fabric)
-    base.scale.set(1.22, .62, .94)
-    base.position.y = .65
-    base.castShadow = true
-    base.receiveShadow = true
-    beanbag.add(base)
+    const shellProfile = [
+      new THREE.Vector2(.92, 0), new THREE.Vector2(1.08, .08), new THREE.Vector2(1.18, .31),
+      new THREE.Vector2(1.2, .65), new THREE.Vector2(1.16, .94), new THREE.Vector2(1.05, 1.15),
+      new THREE.Vector2(.86, 1.24), new THREE.Vector2(.7, 1.14), new THREE.Vector2(.64, .94),
+      new THREE.Vector2(.7, .74), new THREE.Vector2(.78, .62),
+    ]
+    const shell = new THREE.Mesh(new THREE.LatheGeometry(shellProfile, 96), fabric)
+    shell.scale.set(1.12, 1, .96)
+    shell.castShadow = true
+    shell.receiveShadow = true
+    beanbag.add(shell)
 
-    const back = new THREE.Mesh(lobeGeometry.clone(), fabricLight)
-    back.scale.set(1.03, .88, .66)
-    back.position.set(0, 1.18, -.43)
-    back.rotation.x = -.3
-    back.castShadow = true
-    beanbag.add(back)
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.86, .2, 24, 96), fabric)
+    rim.rotation.x = Math.PI / 2
+    rim.scale.set(1.12, .96, 1)
+    rim.position.y = .9
+    rim.castShadow = true
+    beanbag.add(rim)
 
-    for (const side of [-1, 1]) {
-      const bolster = new THREE.Mesh(lobeGeometry.clone(), fabric)
-      bolster.scale.set(.38, .47, .7)
-      bolster.position.set(side * .77, .82, .12)
-      bolster.rotation.z = side * -.18
-      bolster.castShadow = true
-      beanbag.add(bolster)
-    }
+    // Raise the rear half into the enveloping nest silhouette from the reference,
+    // while the lower ring stays soft enough to step into from the front.
+    const rearBolster = new THREE.Mesh(new THREE.TorusGeometry(.92, .31, 24, 64, Math.PI), fabric)
+    rearBolster.position.set(0, .72, -.26)
+    rearBolster.scale.x = 1.12
+    rearBolster.castShadow = true
+    beanbag.add(rearBolster)
 
-    const seat = new THREE.Mesh(new THREE.CircleGeometry(.62, 64), fabricDark)
-    seat.rotation.x = -Math.PI / 2
-    seat.scale.y = .72
-    seat.position.set(0, 1.02, .25)
+    const seat = new THREE.Mesh(new THREE.SphereGeometry(1, 56, 28), fabricDark)
+    seat.scale.set(.73, .15, .68)
+    seat.position.set(0, .66, .04)
     seat.receiveShadow = true
     beanbag.add(seat)
 
-    const piping = new THREE.Mesh(new THREE.TorusGeometry(.86, .018, 8, 72), this.material(0x5d5045, .92))
-    piping.rotation.x = Math.PI / 2
-    piping.scale.set(1.33, 1, 1.02)
-    piping.position.y = .63
-    beanbag.add(piping)
+    const foldMaterial = new THREE.MeshStandardMaterial({ color: 0x45483d, roughness: 1, transparent: true, opacity: .3 })
+    for (let index = 0; index < 30; index++) {
+      const angle = index / 30 * Math.PI * 2
+      const direction = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle))
+      const fold = new THREE.CatmullRomCurve3([
+        direction.clone().multiply(new THREE.Vector3(.76, 0, .69)).setY(1.18),
+        direction.clone().multiply(new THREE.Vector3(1.03, 0, .9)).setY(1.02),
+        direction.clone().multiply(new THREE.Vector3(1.13, 0, .98)).setY(.7),
+      ])
+      const seam = new THREE.Mesh(new THREE.TubeGeometry(fold, 12, .008, 5, false), foldMaterial)
+      beanbag.add(seam)
+    }
+
+    const pillow = new THREE.Mesh(new RoundedBoxGeometry(.96, .72, .24, 5, .18), this.material(0x74756f, .98, .01))
+    pillow.position.set(.03, 1.34, -.02)
+    pillow.rotation.set(-.08, .04, .08)
+    pillow.castShadow = true
+    beanbag.add(pillow)
 
   }
 
