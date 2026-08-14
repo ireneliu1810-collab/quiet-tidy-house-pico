@@ -118,13 +118,13 @@ export default function App() {
   )
 }
 
-const ritualCopy: Record<ActivityId, { title: string; instruction: string; mode: 'slide' | 'circle' | 'hold' | 'sweep' }> = {
-  shelf: { title: '把书送回空位', instruction: '按住书脊，缓缓向右拖入书架', mode: 'slide' },
-  repair: { title: '为旧钟重新上弦', instruction: '按住旋钮，稳定地画几个圆圈', mode: 'circle' },
-  water: { title: '让水慢慢渗进陶土', instruction: '按住壶柄，不急着松开', mode: 'hold' },
-  record: { title: '沿着沟槽擦拭唱片', instruction: '按住绒布，绕着唱片缓缓画圈', mode: 'circle' },
-  collection: { title: '把收藏品放回软垫', instruction: '按住物件，缓缓拖到右侧光晕', mode: 'slide' },
-  desk: { title: '把纸张边缘理齐', instruction: '按住纸面，来回做几次轻柔扫动', mode: 'sweep' },
+const ritualCopy: Record<ActivityId, { title: string; instruction: string; mode: 'slide' | 'circle' | 'hold' | 'sweep'; material: string; cue: string; result: string }> = {
+  shelf: { title: '把书送回空位', instruction: '按住倾斜的书脊，沿木格缓缓推入', mode: 'slide', material: '亚麻书脊 · 胡桃木', cue: '听纸页轻擦木格', result: '书脊会与旁边的书慢慢齐平' },
+  repair: { title: '为旧钟重新上弦', instruction: '按住黄铜旋钮，稳定地绕圈', mode: 'circle', material: '黄铜 · 珐琅表盘', cue: '听齿轮逐齿咬合', result: '秒针会重新开始平稳呼吸' },
+  water: { title: '让水慢慢渗进陶土', instruction: '按住壶柄，保持一个舒服的倾角', mode: 'hold', material: '陶壶 · 湿润土壤', cue: '听水珠落进泥土', result: '叶片会一点点舒展开来' },
+  record: { title: '沿着沟槽擦拭唱片', instruction: '按住绒布，顺着唱片缓缓画圈', mode: 'circle', material: '天鹅绒 · 黑胶沟槽', cue: '听细微而均匀的摩擦', result: '浮尘会沿着一整圈离开唱片' },
+  collection: { title: '把收藏品放回软垫', instruction: '托住陶瓷底部，缓缓移向暖光', mode: 'slide', material: '陶瓷 · 羊毛软垫', cue: '听底部轻触软垫', result: '光晕会在摆正时安静下来' },
+  desk: { title: '把纸张边缘理齐', instruction: '按住纸面，来回做几次轻柔扫动', mode: 'sweep', material: '棉纸 · 木质桌面', cue: '听纸边一张张靠拢', result: '散开的纸角会慢慢重叠整齐' },
 }
 
 function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: () => void; onComplete: () => void }) {
@@ -185,16 +185,46 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
     window.clearInterval(holdTimer.current)
   }
 
+  const activity = activities.find(item => item.id === id)
+  const percent = Math.round(progress * 100)
+
   return (
     <div className="ritual-overlay" role="dialog" aria-modal="true" aria-label={copy.title}>
-      <button className="ritual-close" onClick={onClose} aria-label="暂时放下">×</button>
-      <div className="ritual-copy"><small>SLOW GESTURE · {activities.find(item => item.id === id)?.number}</small><h2>{copy.title}</h2><p>{copy.instruction}</p></div>
-      <div className={`gesture-stage ritual-${id} ${done.current ? 'done' : ''}`} style={{ '--progress': progress } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="button" tabIndex={0} aria-label={copy.instruction}>
-        <div className="gesture-scene"><i className="object-a"/><i className="object-b"/><i className="object-c"/><span className="gesture-hand">✦</span></div>
-        <div className="gesture-track"><i /></div>
-        <b>{progress >= 1 ? '刚刚好' : copy.mode === 'hold' ? '保持住，听水慢慢落下' : '不用快，沿着动作继续'}</b>
+      <div className={`ritual-workbench ritual-${id} ${done.current ? 'done' : ''}`}>
+        <header className="ritual-head">
+          <div className="ritual-index"><span>{activity?.icon}</span><p><small>QUIET RITUAL · {activity?.number}</small><b>{activity?.title}</b></p></div>
+          <button className="ritual-close" onClick={onClose} aria-label="暂时放下"><span>暂时放下</span><i>×</i></button>
+        </header>
+
+        <div className="ritual-body">
+          <aside className="ritual-copy">
+            <small>慢动作练习</small>
+            <h2>{copy.title}</h2>
+            <p>{copy.instruction}</p>
+            <dl>
+              <div><dt>触感</dt><dd>{copy.material}</dd></div>
+              <div><dt>声音</dt><dd>{copy.cue}</dd></div>
+              <div><dt>变化</dt><dd>{copy.result}</dd></div>
+            </dl>
+            <div className="ritual-breath"><i/><span>吸气</span><em/><span>呼气</span></div>
+          </aside>
+
+          <div className="gesture-panel">
+            <div className="gesture-caption"><span>{copy.mode === 'hold' ? '按住 · 保持' : copy.mode === 'circle' ? '按住 · 绕圈' : copy.mode === 'sweep' ? '按住 · 轻扫' : '按住 · 慢推'}</span><b>{percent}<small>%</small></b></div>
+            <div className="gesture-stage" style={{ '--progress': progress } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="slider" tabIndex={0} aria-label={copy.instruction} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+              <div className="gesture-scene">
+                <i className="scene-surface"/><i className="scene-glow"/>
+                <i className="object-a"/><i className="object-b"/><i className="object-c"/>
+                <span className="gesture-hand"><i/>{progress > .03 ? '继续' : '按住'}</span>
+              </div>
+              <div className="gesture-track"><i /></div>
+            </div>
+            <div className="gesture-status"><i className={progress > 0 ? 'awake' : ''}/><b>{progress >= 1 ? '刚刚好，听它安静下来' : copy.mode === 'hold' ? '保持住，不必加快' : '跟着物件的阻力慢慢移动'}</b><span>随时可以松手</span></div>
+          </div>
+        </div>
+
+        <footer className="ritual-note"><i />没有倒计时，也没有做错。让手找到舒服的速度。</footer>
       </div>
-      <div className="ritual-note"><i />没有倒计时。手臂累了，就先松开。</div>
     </div>
   )
 }
