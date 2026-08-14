@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { Spatial } from '@webspatial/core-sdk'
 import { QuietRoom, type ActivityId, type RoomEvent } from './room'
+import catSleepUrl from './assets/cat-sleep-v2.png'
 
 const activities: Array<{ id: ActivityId; icon: string; title: string; hint: string; number: string }> = [
   { id: 'shelf', icon: '▥', title: '整理书架', hint: '纸页与木格', number: '01' },
@@ -291,47 +292,17 @@ function RitualOverlay({ id, onClose, onComplete, onGestureStart, onGestureEnd }
 function CatPettingIllustration({ progress }: { progress: number }) {
   const response = Math.min(1, progress * 3)
   return (
-    <svg className="cat-illustration" viewBox="0 0 620 280" aria-hidden="true">
-      <defs>
-        <linearGradient id="catFur" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#d79a6d"/><stop offset=".55" stopColor="#b8754f"/><stop offset="1" stopColor="#81503b"/>
-        </linearGradient>
-        <linearGradient id="catCream" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f0d8b8"/><stop offset="1" stopColor="#cba783"/>
-        </linearGradient>
-        <radialGradient id="catCushion">
-          <stop offset="0" stopColor="#718579"/><stop offset="1" stopColor="#35483e"/>
-        </radialGradient>
-      </defs>
-      <ellipse cx="315" cy="226" rx="242" ry="39" fill="url(#catCushion)" opacity=".72"/>
-      <ellipse cx="315" cy="232" rx="205" ry="20" fill="#17231d" opacity=".34"/>
-
-      <g className="purr-rings" opacity={response}>
-        <path d="M451 84 C480 98 480 128 452 141"/><path d="M470 68 C516 92 517 136 475 160"/>
-      </g>
-
-      <g className="cat-drawing" style={{ transform: `translateY(${Math.sin(progress * Math.PI * 8) * 1.5}px)` }}>
-        <path d="M181 179 C133 173 113 139 126 111 C139 83 177 88 185 119 C191 145 169 163 143 157" fill="none" stroke="#8d573f" strokeWidth="21" strokeLinecap="round"/>
-        <ellipse cx="299" cy="159" rx="151" ry="71" fill="url(#catFur)"/>
-        <ellipse cx="226" cy="145" rx="66" ry="57" fill="#9b5d43" opacity=".72"/>
-        <path d="M201 104 C215 122 218 151 210 179 M242 94 C254 115 258 143 252 178 M285 91 C295 111 300 132 299 154" fill="none" stroke="#754635" strokeWidth="9" strokeLinecap="round" opacity=".52"/>
-
-        <g transform="translate(408 126)">
-          <path d="M-50 -24 L-39 -78 L-5 -38 M27 -40 L61 -78 L61 -17" fill="#a96649" stroke="#8b523c" strokeWidth="6" strokeLinejoin="round"/>
-          <path d="M-38 -41 L-34 -62 L-20 -43 M39 -44 L53 -63 L51 -36" fill="#d99b83" opacity=".75"/>
-          <ellipse cx="7" cy="9" rx="75" ry="64" fill="url(#catFur)"/>
-          <ellipse cx="-13" cy="26" rx="29" ry="20" fill="url(#catCream)"/><ellipse cx="25" cy="26" rx="29" ry="20" fill="url(#catCream)"/>
-          <path d="M-38 2 Q-24 14 -10 2 M25 2 Q39 14 53 1" fill="none" stroke="#332b26" strokeWidth="5" strokeLinecap="round"/>
-          <path d="M3 23 Q8 17 14 23 Q9 31 3 23Z" fill="#75453e"/>
-          <path d="M8 29 Q7 39 -1 42 M8 29 Q10 39 19 42" fill="none" stroke="#5d4338" strokeWidth="3" strokeLinecap="round"/>
-          <path d="M-8 29 L-65 19 M-9 37 L-69 39 M23 29 L76 17 M23 37 L82 39" stroke="#ddc9ae" strokeWidth="2.4" strokeLinecap="round" opacity=".78"/>
-        </g>
-
-        <ellipse cx="355" cy="202" rx="48" ry="22" fill="url(#catCream)" transform="rotate(-8 355 202)"/>
-        <ellipse cx="401" cy="199" rx="46" ry="21" fill="url(#catCream)" transform="rotate(7 401 199)"/>
-        <path d="M357 198 L355 211 M376 196 L376 211 M403 195 L404 208 M421 196 L423 207" stroke="#a77b60" strokeWidth="2" opacity=".58"/>
-      </g>
-    </svg>
+    <div className="cat-ritual-illustration" style={{ '--cat-response': response } as CSSProperties} aria-hidden="true">
+      <i className="cat-ritual-cushion"/>
+      <img
+        className="cat-ritual-image"
+        src={catSleepUrl}
+        alt=""
+        draggable={false}
+        style={{ transform: `translate(-50%,-50%) translateY(${Math.sin(progress * Math.PI * 8) * 1.5}px) scale(${.91 + response * .025})` }}
+      />
+      <span className="cat-ritual-purr"><i/><i/><i/></span>
+    </div>
   )
 }
 
