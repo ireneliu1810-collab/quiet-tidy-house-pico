@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { MusicSoundscape } from './soundscape'
 
 export type ActivityId = 'shelf' | 'repair' | 'water' | 'record' | 'collection' | 'desk'
@@ -16,16 +17,26 @@ type Interactive = {
   rotation: THREE.Euler
 }
 
-const palette = {
-  wall: 0x59685e, floor: 0x6d4c38, wood: 0x6e4932, paleWood: 0xb88e65,
-  leaf: 0x4e7757, moss: 0x82906b, cream: 0xe6d6b9, brass: 0xaa8355,
-  clay: 0xa66e55, ink: 0x222822, glow: 0xffdda5,
+const colors = {
+  wall: 0x53645a,
+  wallDark: 0x394b43,
+  wood: 0x744a33,
+  woodLight: 0xa8704d,
+  floorA: 0x7b5038,
+  floorB: 0x68422f,
+  cream: 0xe8dbc2,
+  linen: 0x8f9887,
+  moss: 0x55735a,
+  leaf: 0x3f694c,
+  brass: 0xb58a52,
+  clay: 0xa6654f,
+  ink: 0x17201c,
 }
 
 export class QuietRoom {
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
-  private camera = new THREE.PerspectiveCamera(44, 1, 0.1, 70)
+  private camera = new THREE.PerspectiveCamera(28, 1, .1, 80)
   private raycaster = new THREE.Raycaster()
   private pointer = new THREE.Vector2()
   private clock = new THREE.Clock()
@@ -35,17 +46,19 @@ export class QuietRoom {
   private activeStarted = 0
   private frame = 0
   private soundscape = new MusicSoundscape()
+  private rain: THREE.Object3D[] = []
+  private lampGlow: THREE.Mesh | null = null
 
   constructor(private canvas: HTMLCanvasElement, private onRequest: (id: ActivityId) => void) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6))
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.22
-    this.camera.position.set(0, 3.35, 10.7)
-    this.camera.lookAt(0, 2.6, -3)
+    this.renderer.toneMappingExposure = 1.15
+    this.camera.position.set(12.8, 10.2, 15.2)
+    this.camera.lookAt(0, 2.15, -1.6)
     this.buildRoom()
     this.resize()
     this.bind()
@@ -61,187 +74,440 @@ export class QuietRoom {
     return this.soundscape.setAmbient(enabled)
   }
 
-  private mat(color: number, roughness = .72, metalness = .05) {
+  private material(color: number, roughness = .72, metalness = .04) {
     return new THREE.MeshStandardMaterial({ color, roughness, metalness })
   }
 
-  private box(size: [number, number, number], color: number, position: [number, number, number], roughness = .72) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), this.mat(color, roughness))
+  private rounded(
+    size: [number, number, number], color: number, position: [number, number, number],
+    radius = .08, roughness = .72, metalness = .04, parent: THREE.Object3D = this.scene,
+  ) {
+    const geometry = new RoundedBoxGeometry(size[0], size[1], size[2], 4, Math.min(radius, Math.min(...size) * .45))
+    const mesh = new THREE.Mesh(geometry, this.material(color, roughness, metalness))
     mesh.position.set(...position)
     mesh.castShadow = true
     mesh.receiveShadow = true
-    this.scene.add(mesh)
+    parent.add(mesh)
+    return mesh
+  }
+
+  private box(
+    size: [number, number, number], color: number, position: [number, number, number],
+    roughness = .75, parent: THREE.Object3D = this.scene,
+  ) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), this.material(color, roughness))
+    mesh.position.set(...position)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    parent.add(mesh)
     return mesh
   }
 
   private buildRoom() {
-    this.scene.background = new THREE.Color(0x2a3b31)
-    this.scene.fog = new THREE.FogExp2(0x26342d, .022)
-    this.scene.add(new THREE.HemisphereLight(0xffefd2, 0x24342b, 2.8))
-    const lamp = new THREE.PointLight(palette.glow, 112, 23, 2)
-    lamp.position.set(-2.8, 5.2, 1.5)
-    lamp.castShadow = true
-    this.scene.add(lamp)
-    const moon = new THREE.DirectionalLight(0xa9c5bd, 1.8)
-    moon.position.set(5, 6, -5)
-    this.scene.add(moon)
+    this.scene.background = new THREE.Color(0x070b09)
+    this.scene.fog = new THREE.Fog(0x111b17, 24, 48)
+    this.buildShell()
+    this.buildLights()
+    this.buildBookcase()
+    this.buildDesk()
+    this.buildWindow()
+    this.buildLounge()
+    this.buildDecor()
+  }
 
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 22), this.mat(palette.floor, .9))
-    floor.rotation.x = -Math.PI / 2
-    floor.position.set(0, 0, -2)
-    floor.receiveShadow = true
-    this.scene.add(floor)
-    this.box([18, 8, .25], palette.wall, [0, 4, -8])
-    this.box([.25, 8, 22], 0x4a5c52, [-9, 4, -2])
-    this.box([.25, 8, 22], 0x52655a, [9, 4, -2])
+  private buildShell() {
+    // Cutaway room: the front and right walls are intentionally absent.
+    const wallMaterial = this.material(colors.wall, .96)
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(14.4, 7.4, .24), wallMaterial)
+    backWall.position.set(0, 3.7, -7.0)
+    backWall.receiveShadow = true
+    this.scene.add(backWall)
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(.24, 7.4, 12.4), this.material(colors.wallDark, .94))
+    leftWall.position.set(-7.1, 3.7, -.9)
+    leftWall.receiveShadow = true
+    this.scene.add(leftWall)
 
-    // Deep blue window glass and layered diagonal rain establish an outside world.
-    this.box([4.7, 3.25, .14], 0x213b40, [4.6, 4.7, -7.78], .3)
-    const distantGlow = new THREE.Mesh(new THREE.CircleGeometry(.32, 24), new THREE.MeshBasicMaterial({ color: 0x829d92, transparent: true, opacity: .24 }))
-    distantGlow.position.set(5.75, 5.38, -7.64)
-    this.scene.add(distantGlow)
-    for (const x of [2.28, 4.6, 6.92]) this.box([.09, 3.38, .13], palette.paleWood, [x, 4.7, -7.57])
-    for (const y of [3.1, 6.3]) this.box([4.82, .09, .13], palette.paleWood, [4.6, y, -7.57])
-    for (let i = 0; i < 72; i++) {
-      const length = .18 + Math.random() * .52
-      const rain = new THREE.Mesh(new THREE.BoxGeometry(.014, length, .012), new THREE.MeshBasicMaterial({ color: i % 5 ? 0xb9d8d2 : 0xe1eee6, transparent: true, opacity: .18 + Math.random() * .38 }))
-      rain.position.set(2.35 + Math.random() * 4.5, 3.15 + Math.random() * 3.05, -7.47)
-      rain.rotation.z = -.16
-      rain.userData.rain = true
-      rain.userData.speed = .012 + Math.random() * .018
-      this.scene.add(rain)
+    // Baseboards and wall panelling keep the room from reading as an empty box.
+    this.rounded([14.2, .18, .2], 0x80624b, [0, .18, -6.82], .05, .82)
+    this.rounded([.2, .18, 12.1], 0x6b503f, [-6.91, .18, -.9], .05, .84)
+    for (let x = -6.3; x <= 6.3; x += 1.8) this.box([.025, 2.2, .04], 0x5f7167, [x, 1.3, -6.84], .94)
+
+    // Long, staggered timber boards read as a warm residential floor instead of tiles.
+    for (let row = 0; row < 20; row++) {
+      for (let column = 0; column < 7; column++) {
+        const stagger = row % 2 ? 1.02 : 0
+        const x = -6.25 + column * 2.12 + stagger
+        const z = -6.48 + row * .62
+        this.rounded([2.02, .1, .56], (column + row) % 3 ? colors.floorA : colors.floorB, [x, .03, z], .022, .88)
+      }
     }
 
-    // Bookshelf and softly misaligned books.
-    this.box([4.2, .28, 1.2], palette.wood, [-5.6, 1.0, -6.2])
-    this.box([4.2, .28, 1.2], palette.wood, [-5.6, 2.35, -6.2])
-    this.box([4.2, .28, 1.2], palette.wood, [-5.6, 3.7, -6.2])
-    this.box([.28, 4.3, 1.2], palette.wood, [-7.55, 2.55, -6.2])
-    this.box([.28, 4.3, 1.2], palette.wood, [-3.65, 2.55, -6.2])
-    const bookColors = [0x7d5545, 0x6e7f68, 0xb18a63, 0x536b70, 0x92684e]
-    const bookGroup = new THREE.Group()
-    for (let i = 0; i < 7; i++) {
-      const book = new THREE.Mesh(new THREE.BoxGeometry(.38 + i % 2 * .08, .92 + i % 3 * .12, .76), this.mat(bookColors[i % bookColors.length], .82))
-      book.position.set(-1.35 + i * .45, .58 + (i % 3) * .03, 0)
-      book.rotation.z = i === 5 ? -.19 : i === 2 ? .14 : 0
-      book.castShadow = true
-      bookGroup.add(book)
+    // Small ceiling edge makes the cutaway silhouette deliberate.
+    this.rounded([14.4, .22, .36], 0x27372f, [0, 7.35, -6.86], .04, .9)
+    this.rounded([.36, .22, 12.4], 0x23332b, [-6.94, 7.35, -.9], .04, .9)
+  }
+
+  private buildLights() {
+    this.scene.add(new THREE.HemisphereLight(0xbfd3ca, 0x34291f, 1.55))
+
+    const moon = new THREE.DirectionalLight(0x86b9c4, 3.4)
+    moon.position.set(7, 9, -3)
+    moon.target.position.set(2.8, 1.7, -5.7)
+    moon.castShadow = true
+    moon.shadow.mapSize.set(1024, 1024)
+    moon.shadow.camera.left = -10
+    moon.shadow.camera.right = 10
+    moon.shadow.camera.top = 10
+    moon.shadow.camera.bottom = -10
+    this.scene.add(moon, moon.target)
+
+    const deskLight = new THREE.SpotLight(0xffb56c, 75, 12, .7, .75, 1.25)
+    deskLight.position.set(-.2, 5.4, -4.5)
+    deskLight.target.position.set(.2, 1.4, -4.6)
+    deskLight.castShadow = true
+    deskLight.shadow.mapSize.set(1024, 1024)
+    this.scene.add(deskLight, deskLight.target)
+
+    const floorLamp = new THREE.PointLight(0xffd49a, 34, 8, 2)
+    floorLamp.position.set(5.45, 3.15, -1.85)
+    this.scene.add(floorLamp)
+
+    const windowFill = new THREE.PointLight(0x6ba4b9, 24, 13, 1.8)
+    windowFill.position.set(4.5, 4.8, -5.8)
+    this.scene.add(windowFill)
+  }
+
+  private buildBookcase() {
+    const group = new THREE.Group()
+    group.position.set(-5.25, 0, -5.88)
+    this.scene.add(group)
+    const wood = colors.wood
+    this.rounded([3.05, .22, .78], wood, [0, .42, 0], .07, .76, .04, group)
+    this.rounded([3.05, .22, .78], wood, [0, 2.0, 0], .07, .76, .04, group)
+    this.rounded([3.05, .22, .78], wood, [0, 3.6, 0], .07, .76, .04, group)
+    this.rounded([3.05, .22, .78], wood, [0, 5.18, 0], .07, .76, .04, group)
+    this.rounded([.22, 5.0, .78], wood, [-1.42, 2.7, 0], .07, .76, .04, group)
+    this.rounded([.22, 5.0, .78], wood, [1.42, 2.7, 0], .07, .76, .04, group)
+
+    const bookColors = [0x7e5044, 0x657c6f, 0xb1865d, 0x455f67, 0x91654e, 0xc09a6d, 0x4e6d57]
+    const interactiveBooks = new THREE.Group()
+    for (let shelf = 0; shelf < 3; shelf++) {
+      const count = shelf === 1 ? 7 : 9
+      for (let i = 0; i < count; i++) {
+        const width = .18 + (i % 3) * .045
+        const height = .78 + ((i + shelf) % 4) * .12
+        const book = this.rounded([width, height, .58], bookColors[(i + shelf * 2) % bookColors.length], [-1.08 + i * .27, .58 + shelf * 1.6 + height / 2, .08], .025, .82, .02, interactiveBooks)
+        book.rotation.z = shelf === 1 && i === 5 ? -.13 : (i % 7 === 0 ? .035 : 0)
+        const band = this.box([width + .012, .035, .59], 0xd6bd8d, [book.position.x, book.position.y + height * .25, .075], .62, interactiveBooks)
+        band.rotation.z = book.rotation.z
+      }
     }
-    bookGroup.position.set(-5.7, 2.5, -5.5)
-    this.scene.add(bookGroup)
-    this.addInteractive('shelf', bookGroup)
+    interactiveBooks.position.copy(group.position)
+    this.scene.add(interactiveBooks)
+    this.addInteractive('shelf', interactiveBooks)
 
-    // Desk, record, repair object and scattered paper.
-    this.box([7.6, .32, 3.2], palette.paleWood, [0, 1.45, -2.6], .8)
-    for (const x of [-3.3, 3.3]) for (const z of [-3.7, -1.5]) this.box([.25, 1.5, .25], palette.wood, [x, .72, z])
-    const recordMat = new THREE.MeshPhysicalMaterial({ color: 0x121616, roughness: .18, metalness: .12, clearcoat: .72, clearcoatRoughness: .2 })
-    const record = new THREE.Mesh(new THREE.CylinderGeometry(.78, .78, .055, 64), recordMat)
-    record.position.set(2.25, 1.655, -2.8)
-    record.castShadow = true
-    const recordLabel = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .062, 32), this.mat(0xc28b63, .65))
-    recordLabel.position.y = .012
-    record.add(recordLabel)
-    this.scene.add(record)
-    this.addInteractive('record', record)
-
-    const clock = new THREE.Group()
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(.48, .48, .17, 32), this.mat(palette.brass, .34, .65))
-    body.rotation.x = Math.PI / 2
-    const face = new THREE.Mesh(new THREE.CylinderGeometry(.39, .39, .185, 32), this.mat(palette.cream, .85))
-    face.rotation.x = Math.PI / 2
-    const handMat = this.mat(0x2b302c, .5, .3)
-    const hourHand = new THREE.Mesh(new THREE.BoxGeometry(.055, .25, .025), handMat)
-    hourHand.position.set(-.055, .055, .115)
-    hourHand.rotation.z = .45
-    const minuteHand = new THREE.Mesh(new THREE.BoxGeometry(.045, .32, .025), handMat)
-    minuteHand.position.set(.07, .08, .118)
-    minuteHand.rotation.z = -1.0
-    const centerPin = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), this.mat(palette.brass, .28, .72))
-    centerPin.position.z = .145
-    clock.add(body, face, hourHand, minuteHand, centerPin)
-    for (const side of [-1, 1]) {
-      const bell = new THREE.Mesh(new THREE.SphereGeometry(.22, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), this.mat(palette.brass, .28, .72))
-      bell.position.set(side * .34, .43, 0)
-      bell.rotation.z = side * -.35
-      const foot = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, .2, 12), this.mat(palette.brass, .32, .65))
-      foot.position.set(side * .27, -.45, 0)
-      foot.rotation.z = side * -.18
-      clock.add(bell, foot)
-    }
-    const winder = new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .15, 14), this.mat(0x544333, .45, .45))
-    winder.position.set(.53, 0, 0)
-    winder.rotation.z = Math.PI / 2
-    clock.add(winder)
-    clock.position.set(-2.5, 2.11, -2.65)
-    this.scene.add(clock)
-    this.addInteractive('repair', clock)
-
-    const papers = new THREE.Group()
+    // Baskets and ceramics fill negative space like a lived-in room.
+    this.rounded([1.1, .68, .6], 0x7f5b43, [-.68, .9, .06], .12, .9, .02, group)
+    this.rounded([.9, .68, .6], 0x6b7769, [.62, .9, .06], .12, .9, .02, group)
     for (let i = 0; i < 4; i++) {
-      const paper = new THREE.Mesh(new THREE.BoxGeometry(1.2, .025, .85), this.mat(i % 2 ? 0xd2c5aa : 0xe3d8bf, .95))
-      paper.position.set((i - 1.5) * .2, i * .025, (i % 2) * .15)
-      paper.rotation.y = (i - 1.5) * .14
-      papers.add(paper)
+      const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(.16 + i * .025, 1), this.material([0xb67f67, 0x78928b, 0xd0a66b, 0x6e7b68][i], .7))
+      pebble.position.set(-.42 + i * .28, 4.0, .05)
+      pebble.castShadow = true
+      group.add(pebble)
     }
-    papers.position.set(.1, 1.65, -2.15)
-    this.scene.add(papers)
-    this.addInteractive('desk', papers)
+  }
 
-    // Plant with visible stems and paired leaves rather than a stack of blobs.
+  private buildDesk() {
+    const desk = new THREE.Group()
+    desk.position.set(.55, 0, -5.2)
+    this.scene.add(desk)
+    this.rounded([6.4, .28, 1.85], colors.woodLight, [0, 1.72, 0], .11, .72, .03, desk)
+    this.rounded([1.55, 1.45, 1.55], 0x8c5c42, [-2.18, .88, .02], .1, .78, .03, desk)
+    this.rounded([1.55, 1.45, 1.55], 0x76503c, [2.18, .88, .02], .1, .8, .03, desk)
+    for (const side of [-2.18, 2.18]) {
+      for (let i = 0; i < 3; i++) {
+        this.rounded([1.25, .34, .07], i % 2 ? 0x744b37 : 0x7d543e, [side, .48 + i * .44, 1.0], .045, .79, .03, desk)
+        this.rounded([.38, .055, .08], colors.brass, [side, .48 + i * .44, 1.055], .026, .34, .7, desk)
+      }
+    }
+
+    // Padded stool gives the desk an ergonomic, believable scale.
+    this.rounded([1.35, .26, 1.12], 0x53645c, [.2, 1.05, 2.0], .18, .98, .02, desk)
+    for (const x of [-.42, .82]) for (const z of [1.66, 2.34]) this.rounded([.1, 1.0, .1], 0x45372e, [x, .5, z], .035, .7, .3, desk)
+
+    this.buildClock(desk)
+    this.buildRecord(desk)
+    this.buildPapers(desk)
+    this.buildDeskLamp(desk)
+    this.buildTeaSet(desk)
+  }
+
+  private buildClock(parent: THREE.Object3D) {
+    const clock = new THREE.Group()
+    clock.position.set(-1.0, 2.35, .18)
+    parent.add(clock)
+    const brass = this.material(colors.brass, .32, .68)
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.46, .46, .19, 48), brass)
+    body.rotation.x = Math.PI / 2
+    body.castShadow = true
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(.37, .37, .205, 48), this.material(colors.cream, .88))
+    face.rotation.x = Math.PI / 2
+    const hour = this.rounded([.045, .22, .025], colors.ink, [-.045, .05, .125], .018, .48, .25, clock)
+    hour.rotation.z = .48
+    const minute = this.rounded([.038, .29, .025], colors.ink, [.065, .08, .128], .018, .48, .25, clock)
+    minute.rotation.z = -.95
+    const pin = new THREE.Mesh(new THREE.SphereGeometry(.05, 18, 12), brass)
+    pin.position.z = .15
+    clock.add(body, face, pin)
+    for (let mark = 0; mark < 12; mark++) {
+      const tick = this.rounded([.018, .075, .015], 0x6c5a43, [Math.sin(mark / 12 * Math.PI * 2) * .29, Math.cos(mark / 12 * Math.PI * 2) * .29, .122], .008, .5, .3, clock)
+      tick.rotation.z = -mark / 12 * Math.PI * 2
+    }
+    for (const side of [-1, 1]) {
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(.19, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2), brass)
+      bell.position.set(side * .33, .41, 0)
+      clock.add(bell)
+      const foot = this.rounded([.08, .24, .1], colors.brass, [side * .27, -.43, 0], .025, .34, .65, clock)
+      foot.rotation.z = side * -.18
+    }
+    this.addInteractive('repair', clock)
+  }
+
+  private buildRecord(parent: THREE.Object3D) {
+    const record = new THREE.Group()
+    record.position.set(1.3, 1.895, .14)
+    parent.add(record)
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(.68, .68, .045, 72), new THREE.MeshPhysicalMaterial({ color: 0x101413, roughness: .2, metalness: .16, clearcoat: .8, clearcoatRoughness: .18 }))
+    disc.castShadow = true
+    record.add(disc)
+    const label = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .052, 36), this.material(0xc98c65, .68))
+    label.position.y = .012
+    record.add(label)
+    for (const radius of [.29, .38, .48, .58, .64]) {
+      const groove = new THREE.Mesh(new THREE.TorusGeometry(radius, .006, 5, 64), this.material(0x59605c, .38, .28))
+      groove.rotation.x = Math.PI / 2
+      groove.position.y = .03
+      record.add(groove)
+    }
+    const felt = this.rounded([1.65, .025, 1.65], 0x324239, [1.3, 1.86, .14], .12, .96, .01, parent)
+    felt.receiveShadow = true
+    this.addInteractive('record', record)
+  }
+
+  private buildPapers(parent: THREE.Object3D) {
+    const papers = new THREE.Group()
+    papers.position.set(.05, 1.9, .08)
+    parent.add(papers)
+    for (let i = 0; i < 5; i++) {
+      const sheet = this.rounded([1.24, .018, .78], i % 2 ? 0xd4c8ad : 0xe8dec9, [(i - 2) * .045, i * .018, (i % 2) * .055], .018, .96, .01, papers)
+      sheet.rotation.y = (i - 2) * .045
+      for (let line = 0; line < 3; line++) this.box([.56 - line * .09, .004, .012], 0x8f9b91, [-.18, .014 + i * .018, -.18 + line * .12], .8, papers)
+    }
+    this.addInteractive('desk', papers)
+  }
+
+  private buildDeskLamp(parent: THREE.Object3D) {
+    const lamp = new THREE.Group()
+    lamp.position.set(-.2, 1.9, -.15)
+    parent.add(lamp)
+    const metal = this.material(0x4c554f, .42, .62)
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.28, .33, .08, 32), metal)
+    base.castShadow = true
+    lamp.add(base)
+    const arm = this.rounded([.09, 1.05, .09], 0x56615a, [0, .55, 0], .035, .42, .62, lamp)
+    arm.rotation.z = -.22
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(.35, .48, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x6d756d, roughness: .45, metalness: .42, side: THREE.DoubleSide }))
+    shade.position.set(-.23, 1.12, 0)
+    shade.rotation.z = -.18
+    shade.castShadow = true
+    lamp.add(shade)
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(.12, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffcf8d }))
+    glow.position.set(-.23, .98, 0)
+    lamp.add(glow)
+    this.lampGlow = glow
+  }
+
+  private buildTeaSet(parent: THREE.Object3D) {
+    const tray = this.rounded([1.05, .045, .52], 0x503d2f, [2.42, 1.9, .18], .09, .8, .08, parent)
+    tray.rotation.y = -.08
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(.16, .14, .32, 28, 1, true), this.material(0xb5a483, .82))
+    mug.position.set(2.22, 2.08, .18)
+    mug.castShadow = true
+    parent.add(mug)
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.12, .028, 8, 24, Math.PI * 1.45), this.material(0xb5a483, .82))
+    handle.position.set(2.39, 2.09, .18)
+    handle.rotation.y = Math.PI / 2
+    parent.add(handle)
+    const tin = this.rounded([.25, .36, .25], 0x6d7b70, [2.65, 2.08, .15], .07, .62, .18, parent)
+    tin.rotation.y = .1
+  }
+
+  private buildWindow() {
+    const window = new THREE.Group()
+    window.position.set(4.65, 4.72, -6.78)
+    this.scene.add(window)
+    this.rounded([4.05, 3.15, .1], 0x152b32, [0, 0, 0], .06, .22, .05, window)
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(3.74, 2.86), new THREE.MeshPhysicalMaterial({ color: 0x27444a, roughness: .12, metalness: .05, transmission: .04, transparent: true, opacity: .88 }))
+    glass.position.z = .07
+    window.add(glass)
+    for (const x of [-2.02, 0, 2.02]) this.rounded([.11, 3.28, .16], 0xa07958, [x, 0, .1], .035, .7, .04, window)
+    for (const y of [-1.57, 1.57]) this.rounded([4.18, .11, .16], 0xa07958, [0, y, .1], .035, .7, .04, window)
+    const moon = new THREE.Mesh(new THREE.CircleGeometry(.27, 30), new THREE.MeshBasicMaterial({ color: 0xb8cec4, transparent: true, opacity: .44 }))
+    moon.position.set(1.05, .72, .085)
+    window.add(moon)
+    for (let i = 0; i < 86; i++) {
+      const length = .16 + Math.random() * .44
+      const streak = new THREE.Mesh(new THREE.BoxGeometry(.012, length, .008), new THREE.MeshBasicMaterial({ color: i % 5 ? 0xa7ced0 : 0xe2efea, transparent: true, opacity: .16 + Math.random() * .42 }))
+      streak.position.set(-1.8 + Math.random() * 3.6, -1.35 + Math.random() * 2.7, .1)
+      streak.rotation.z = -.2
+      streak.userData.rainSpeed = .012 + Math.random() * .022
+      window.add(streak)
+      this.rain.push(streak)
+    }
+
+    // Soft curtains frame the opening and add cloth volume.
+    for (const side of [-1, 1]) {
+      const curtain = new THREE.Group()
+      for (let fold = 0; fold < 6; fold++) {
+        const strip = this.rounded([.18, 3.4, .14], side < 0 ? 0x667c70 : 0x5c7167, [side * (2.22 + fold * .09 * -side), 0, .28 + Math.sin(fold) * .03], .08, .96, .01, curtain)
+        strip.rotation.z = side * (.03 + fold * .008)
+      }
+      window.add(curtain)
+    }
+  }
+
+  private buildLounge() {
+    const chair = new THREE.Group()
+    chair.position.set(2.8, 0, 1.7)
+    chair.rotation.y = -.34
+    this.scene.add(chair)
+    const fabric = 0x59665f
+    this.rounded([2.45, .56, 1.85], fabric, [0, .7, 0], .28, .98, .01, chair)
+    const back = this.rounded([2.45, 1.55, .48], 0x536159, [0, 1.55, -.72], .27, .98, .01, chair)
+    back.rotation.x = -.11
+    this.rounded([.42, .8, 1.88], 0x4d5c54, [-1.1, 1.0, 0], .2, .98, .01, chair)
+    this.rounded([.42, .8, 1.88], 0x4d5c54, [1.1, 1.0, 0], .2, .98, .01, chair)
+    this.rounded([1.76, .24, 1.35], 0x718076, [0, 1.03, .05], .18, .99, .01, chair)
+    this.rounded([.78, .5, .18], 0x8b775e, [.48, 1.76, -.48], .12, .98, .01, chair).rotation.z = -.18
+    for (const x of [-.82, .82]) for (const z of [-.56, .56]) this.rounded([.12, .48, .12], 0x42352c, [x, .25, z], .035, .66, .24, chair)
+
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(3.2, 80), this.material(0x756858, .99))
+    rug.rotation.x = -Math.PI / 2
+    rug.scale.y = .7
+    rug.position.set(.7, .13, 1.0)
+    rug.receiveShadow = true
+    this.scene.add(rug)
+
+    // Low table and nested tray details.
+    const table = new THREE.Group()
+    table.position.set(-.25, 0, 1.2)
+    this.scene.add(table)
+    this.rounded([2.2, .23, 1.35], 0x9a6a4b, [0, .78, 0], .15, .78, .03, table)
+    for (const x of [-.82, .82]) for (const z of [-.38, .38]) this.rounded([.14, .72, .14], 0x5b4132, [x, .36, z], .045, .72, .16, table)
+    this.rounded([.9, .04, .58], 0x554237, [.25, .92, -.05], .1, .82, .05, table)
+    const stone = new THREE.Mesh(new THREE.SphereGeometry(.13, 20, 14), this.material(0x818a83, .92))
+    stone.scale.set(1.35, .58, 1)
+    stone.position.set(.28, 1.02, -.03)
+    stone.castShadow = true
+    table.add(stone)
+  }
+
+  private buildDecor() {
+    this.buildPlant()
+    this.buildCollection()
+
+    // Floor lamp: stem, weighted base and layered shade.
+    const lamp = new THREE.Group()
+    lamp.position.set(5.7, 0, -1.9)
+    this.scene.add(lamp)
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.42, .5, .12, 36), this.material(0x5a5044, .45, .48))
+    base.position.y = .12
+    base.castShadow = true
+    lamp.add(base)
+    this.rounded([.09, 3.55, .09], 0x655a4d, [0, 1.9, 0], .035, .42, .56, lamp)
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(.5, .68, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0xc1aa82, roughness: .96, transparent: true, opacity: .96, side: THREE.DoubleSide }))
+    shade.position.y = 3.72
+    shade.rotation.x = Math.PI
+    shade.castShadow = true
+    lamp.add(shade)
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffd8a0 }))
+    bulb.position.y = 3.56
+    lamp.add(bulb)
+
+    // Framed botanical prints on the left wall.
+    for (let i = 0; i < 3; i++) {
+      const frame = new THREE.Group()
+      frame.position.set(-6.92, 3.4 + i * .92, -1.5 + i * .7)
+      frame.rotation.y = Math.PI / 2
+      this.scene.add(frame)
+      this.rounded([1.05, .72, .08], 0x3d342d, [0, 0, 0], .045, .6, .1, frame)
+      this.rounded([.88, .56, .085], 0xd1c6ad, [0, 0, .03], .025, .92, .01, frame)
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(.13, 12, 8), this.material(i % 2 ? 0x6c806c : 0x8b7960, .9))
+      leaf.scale.set(2.1, .45, .12)
+      leaf.position.z = .09
+      leaf.rotation.z = -.45 + i * .28
+      frame.add(leaf)
+    }
+  }
+
+  private buildPlant() {
     const plant = new THREE.Group()
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(.58, .44, .88, 32), this.mat(palette.clay, .88))
-    pot.position.y = .44
-    const soil = new THREE.Mesh(new THREE.CylinderGeometry(.48, .48, .035, 28), this.mat(0x3c2b20, .98))
-    soil.position.y = .875
-    plant.add(pot, soil)
-    const leafMaterial = this.mat(palette.leaf, .78)
-    const lightLeafMaterial = this.mat(palette.moss, .82)
-    const stemMaterial = this.mat(0x476648, .85)
-    for (let i = 0; i < 7; i++) {
-      const angle = -.9 + i * .3
-      const height = 1.0 + (i % 3) * .18
-      const end = new THREE.Vector3(Math.sin(angle) * (.28 + i * .025), .88 + height, Math.cos(angle) * .24)
-      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, .84, 0), new THREE.Vector3(end.x * .45, 1.25, end.z * .45), end])
-      const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, .025, 7, false), stemMaterial)
+    plant.position.set(5.05, 0, -4.85)
+    this.scene.add(plant)
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(.53, .43, .86, 36), this.material(colors.clay, .9))
+    pot.position.y = .48
+    pot.castShadow = true
+    plant.add(pot)
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.5, .055, 10, 36), this.material(0x844c3b, .82))
+    rim.rotation.x = Math.PI / 2
+    rim.position.y = .87
+    plant.add(rim)
+    const soil = new THREE.Mesh(new THREE.CylinderGeometry(.46, .46, .04, 30), this.material(0x39281e, .99))
+    soil.position.y = .88
+    plant.add(soil)
+    const stemMaterial = this.material(0x3d6044, .88)
+    const leafMaterials = [this.material(colors.leaf, .78), this.material(colors.moss, .82), this.material(0x718565, .84)]
+    for (let i = 0; i < 9; i++) {
+      const angle = -1.2 + i * .3
+      const height = 1.15 + (i % 4) * .2
+      const end = new THREE.Vector3(Math.sin(angle) * (.32 + i * .018), .84 + height, Math.cos(angle) * .3)
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, .83, 0), new THREE.Vector3(end.x * .45, 1.32, end.z * .45), end])
+      const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, .023, 7, false), stemMaterial)
+      stem.castShadow = true
       plant.add(stem)
       for (const side of [-1, 1]) {
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 10), (i + side) % 2 ? leafMaterial : lightLeafMaterial)
-        leaf.scale.set(1.25, .32, .58)
-        leaf.position.set(end.x + side * .2, end.y - .08 + side * .1, end.z + side * .04)
-        leaf.rotation.z = side * (.45 + i * .035)
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22, 18, 10), leafMaterials[(i + (side > 0 ? 1 : 0)) % leafMaterials.length])
+        leaf.scale.set(1.45, .28, .62)
+        leaf.position.set(end.x + side * .23, end.y - .08 + side * .11, end.z + side * .06)
+        leaf.rotation.z = side * (.5 + i * .018)
         leaf.rotation.y = angle
+        leaf.castShadow = true
         plant.add(leaf)
       }
     }
-    plant.position.set(5.7, .03, -5.7)
-    this.scene.add(plant)
     this.addInteractive('water', plant)
+  }
 
-    // Collection niche with tactile ceramic and wood objects.
-    this.box([2.9, .17, .82], palette.wood, [7.55, 2.36, -7.05], .82)
+  private buildCollection() {
     const collection = new THREE.Group()
-    const shapes: THREE.BufferGeometry[] = [new THREE.SphereGeometry(.36, 24, 18), new THREE.ConeGeometry(.34, .72, 24), new THREE.DodecahedronGeometry(.38)]
-    shapes.forEach((geometry, index) => {
-      const object = new THREE.Mesh(geometry, this.mat([0xc28a6c, 0x78928b, 0xb89862][index], .65 - index * .1, index * .18))
-      object.position.set((index - 1) * .9, .38, index === 1 ? -.08 : 0)
-      object.castShadow = true
-      collection.add(object)
-    })
-    collection.scale.setScalar(.78)
-    collection.position.set(7.55, 2.48, -6.62)
+    collection.position.set(5.15, 3.0, -6.48)
     this.scene.add(collection)
+    this.rounded([2.5, .16, .65], colors.wood, [0, -.32, 0], .06, .76, .04, collection)
+    const vase = new THREE.Mesh(new THREE.LatheGeometry([
+      new THREE.Vector2(0, 0), new THREE.Vector2(.25, .04), new THREE.Vector2(.28, .34), new THREE.Vector2(.16, .55), new THREE.Vector2(.13, .72), new THREE.Vector2(.19, .76),
+    ], 32), this.material(0xb77d63, .7))
+    vase.position.set(-.72, -.22, 0)
+    vase.castShadow = true
+    collection.add(vase)
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(.24, .62, 28), this.material(0x71897f, .68, .14))
+    cone.position.set(0, .02, 0)
+    cone.castShadow = true
+    collection.add(cone)
+    const carved = new THREE.Mesh(new THREE.DodecahedronGeometry(.3, 2), this.material(0xb8915f, .55, .24))
+    carved.position.set(.72, .02, 0)
+    carved.castShadow = true
+    collection.add(carved)
     this.addInteractive('collection', collection)
-
-    // Woven rug and hanging lamp complete the room scale.
-    const rug = new THREE.Mesh(new THREE.CircleGeometry(3.2, 64), this.mat(0x7b6550, .98))
-    rug.rotation.x = -Math.PI / 2
-    rug.scale.y = .65
-    rug.position.set(0, .02, 1.3)
-    this.scene.add(rug)
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(1, 1.15, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0xb18c65, roughness: .9, side: THREE.DoubleSide }))
-    shade.position.set(-2.8, 5.55, 1.5)
-    shade.rotation.x = Math.PI
-    this.scene.add(shade)
   }
 
   private addInteractive(id: ActivityId, mesh: THREE.Object3D) {
@@ -263,9 +529,9 @@ export class QuietRoom {
     const id = hits[0]?.object.userData.activity as ActivityId | undefined
     const next = this.interactives.find(item => item.id === id) ?? null
     if (next !== this.hovered) {
-      if (this.hovered) this.hovered.mesh.scale.setScalar(1)
+      if (this.hovered && this.hovered !== this.active) this.hovered.mesh.scale.setScalar(1)
       this.hovered = next
-      if (next) next.mesh.scale.setScalar(1.035)
+      if (next && next !== this.active) next.mesh.scale.setScalar(1.025)
       this.canvas.style.cursor = next ? 'pointer' : 'default'
     }
   }
@@ -282,33 +548,33 @@ export class QuietRoom {
   private animate = () => {
     this.frame = requestAnimationFrame(this.animate)
     const elapsed = this.clock.getElapsedTime()
-    this.scene.traverse(object => {
-      if (object.userData.rain) {
-        object.position.y -= object.userData.speed as number
-        object.position.x -= (object.userData.speed as number) * .16
-        if (object.position.y < 3.08) {
-          object.position.y = 6.25
-          object.position.x = 2.35 + Math.random() * 4.5
-        }
+    this.rain.forEach(streak => {
+      streak.position.y -= streak.userData.rainSpeed as number
+      streak.position.x -= (streak.userData.rainSpeed as number) * .19
+      if (streak.position.y < -1.4) {
+        streak.position.y = 1.4
+        streak.position.x = -1.8 + Math.random() * 3.6
       }
     })
+    if (this.lampGlow) this.lampGlow.scale.setScalar(.98 + Math.sin(elapsed * 1.9) * .025)
     if (this.active) {
-      const t = Math.min(1, (performance.now() - this.activeStarted) / 1100)
+      const t = Math.min(1, (performance.now() - this.activeStarted) / 1150)
       const pulse = Math.sin(t * Math.PI)
       const mesh = this.active.mesh
-      mesh.position.y = this.active.rest.y + pulse * .16
+      mesh.position.y = this.active.rest.y + pulse * .1
       if (this.active.id === 'record') mesh.rotation.y = this.active.rotation.y + t * Math.PI * 2
-      else if (this.active.id === 'repair') mesh.rotation.z = this.active.rotation.z + Math.sin(t * Math.PI * 4) * .04
-      else mesh.rotation.y = this.active.rotation.y + pulse * .08
+      else if (this.active.id === 'repair') mesh.rotation.z = this.active.rotation.z + Math.sin(t * Math.PI * 4) * .035
+      else mesh.rotation.y = this.active.rotation.y + pulse * .055
       if (t >= 1) {
         mesh.position.copy(this.active.rest)
         mesh.rotation.copy(this.active.rotation)
-        mesh.scale.setScalar(this.hovered === this.active ? 1.035 : 1)
+        mesh.scale.setScalar(this.hovered === this.active ? 1.025 : 1)
         this.active = null
       }
     }
-    this.camera.position.x = Math.sin(elapsed * .08) * .08
-    this.camera.lookAt(0, 2.55, -3)
+    // Imperceptible breathing in the camera keeps the room alive without moving objects.
+    this.camera.position.y = 10.2 + Math.sin(elapsed * .22) * .025
+    this.camera.lookAt(0, 2.15, -1.6)
     this.renderer.render(this.scene, this.camera)
   }
 
