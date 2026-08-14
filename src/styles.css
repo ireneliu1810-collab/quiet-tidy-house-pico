@@ -54,8 +54,7 @@ button { color: inherit; }
 .ritual-record .object-a{left:61%;top:53%;width:315px;height:218px;border-radius:22px}
 .ritual-record .object-a::after{content:"";position:absolute;left:28px;top:20px;width:178px;height:178px;border-radius:50%;background:radial-gradient(circle,#a88a5d 0 3px,#424a45 4px 54%,#252b28 55% 59%,#3c443f 60%);box-shadow:inset 0 0 0 2px rgba(225,207,174,.08),0 10px 24px rgba(0,0,0,.24)}
 .ritual-record .object-b{z-index:4;left:calc(17% + var(--record-take) * 40%);top:53%;width:178px;height:178px;transform:translate(-50%,-50%) rotateY(calc((1 - var(--record-take)) * 74deg)) rotate(calc(var(--record-wipe) * 720deg));transition:left .07s linear,transform .07s linear}
-.ritual-record .object-c{left:73%;top:29%;height:132px;transform:rotate(23deg)}
-.ritual-record .object-d{left:72.2%;top:26%}
+.ritual-record .object-c,.ritual-record .object-d{display:none}
 .ritual-record .object-e{left:57%;top:53%;width:58px;height:36px;opacity:calc(.35 + var(--record-wipe) * .65);transform:translate(-50%,-50%) rotate(calc(var(--record-wipe) * 1080deg)) translateX(calc(24px + var(--record-wipe) * 62px)) rotate(calc(var(--record-wipe) * -1080deg))}
 .ritual-record .object-f{z-index:5;left:calc(17% + var(--record-take) * 40%);top:53%;width:48px;height:48px;transform:translate(-50%,-50%) rotateY(calc((1 - var(--record-take)) * 74deg)) rotate(calc(var(--record-wipe) * 720deg));transition:left .07s linear,transform .07s linear}
 .ritual-record .object-g{z-index:2;left:5%;top:25%;width:126px;height:190px;border:10px solid #704e39;border-top-width:7px;border-radius:9px;background:linear-gradient(90deg,rgba(40,29,23,.84),rgba(83,56,42,.72));opacity:1;box-shadow:inset 0 -12px #4a3328,0 20px 31px rgba(0,0,0,.3)}
