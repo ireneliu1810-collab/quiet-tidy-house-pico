@@ -228,9 +228,11 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
             <div className="gesture-stage" style={{ '--progress': progress } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="slider" tabIndex={0} aria-label={copy.instruction} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
               <div className="gesture-scene">
                 <i className="scene-surface"/><i className="scene-glow"/>
-                <i className="object-a"/><i className="object-b"/><i className="object-c"/>
-                <i className="object-d"/><i className="object-e"/><i className="object-f"/>
-                <i className="object-g"/><i className="object-h"/><i className="object-i"/>
+                {id === 'water' ? <WateringIllustration progress={progress}/> : <>
+                  <i className="object-a"/><i className="object-b"/><i className="object-c"/>
+                  <i className="object-d"/><i className="object-e"/><i className="object-f"/>
+                  <i className="object-g"/><i className="object-h"/><i className="object-i"/>
+                </>}
                 <span className="gesture-hand"><i/>{progress > .03 ? '继续' : '按住'}</span>
               </div>
               <div className="gesture-track"><i /></div>
@@ -242,5 +244,68 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
         <footer className="ritual-note"><i />没有倒计时，也没有做错。让手找到舒服的速度。</footer>
       </div>
     </div>
+  )
+}
+
+function WateringIllustration({ progress }: { progress: number }) {
+  const waterOpacity = Math.min(1, progress * 5)
+  const tilt = progress * 4
+  const leafLift = .94 + progress * .06
+
+  return (
+    <svg className="watering-illustration" viewBox="0 0 620 280" aria-hidden="true">
+      <defs>
+        <linearGradient id="canBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#c29467"/><stop offset=".5" stopColor="#9a6d48"/><stop offset="1" stopColor="#65452f"/>
+        </linearGradient>
+        <linearGradient id="canSpout" x1="0" y1="0" x2="1" y2=".4">
+          <stop offset="0" stopColor="#9c704b"/><stop offset=".62" stopColor="#bd8c5c"/><stop offset="1" stopColor="#765039"/>
+        </linearGradient>
+        <linearGradient id="potBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#bd7758"/><stop offset=".55" stopColor="#955642"/><stop offset="1" stopColor="#623a34"/>
+        </linearGradient>
+        <linearGradient id="leafBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#92b28b"/><stop offset="1" stopColor="#4f7659"/>
+        </linearGradient>
+        <linearGradient id="waterLine" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#d7eeea" stopOpacity=".75"/><stop offset=".55" stopColor="#a9d8d3"/><stop offset="1" stopColor="#dff1ed"/>
+        </linearGradient>
+      </defs>
+
+      <ellipse cx="315" cy="236" rx="250" ry="28" fill="#a88155" opacity=".08"/>
+
+      <g className="plant-drawing" style={{ transform: `scale(${leafLift})`, transformOrigin: '500px 170px' }}>
+        <path d="M500 172 C500 145 498 118 503 91 C500 72 492 57 486 43" fill="none" stroke="#587d5d" strokeWidth="7" strokeLinecap="round"/>
+        <path d="M500 139 C480 123 464 104 448 87 M501 116 C522 100 537 82 550 64 M500 104 C484 94 470 82 458 68" fill="none" stroke="#587d5d" strokeWidth="5" strokeLinecap="round"/>
+        <path d="M448 89 C421 98 402 89 405 75 C410 59 434 54 458 79 C458 83 454 87 448 89Z" fill="url(#leafBody)"/>
+        <path d="M550 66 C569 47 588 43 592 55 C595 69 576 88 550 91 C544 84 545 74 550 66Z" fill="url(#leafBody)"/>
+        <path d="M486 45 C475 20 482 2 495 5 C508 10 508 31 493 52 C490 51 488 48 486 45Z" fill="url(#leafBody)"/>
+        <path d="M460 70 C443 57 441 42 453 38 C466 34 479 48 480 67 C474 72 467 73 460 70Z" fill="url(#leafBody)"/>
+        <path d="M519 101 C528 79 544 69 554 77 C563 87 551 105 526 113 C521 110 518 106 519 101Z" fill="url(#leafBody)"/>
+      </g>
+
+      <g className="pot-drawing">
+        <path d="M445 169 C450 206 454 239 475 250 C491 259 520 258 536 248 C550 234 554 202 558 169Z" fill="url(#potBody)"/>
+        <path d="M441 166 C441 156 562 156 562 166 C562 176 441 176 441 166Z" fill="#b86e50"/>
+        <ellipse cx="501.5" cy="166" rx="51" ry="7" fill="#33291f"/>
+        <path d="M458 184 C461 218 466 238 481 245" fill="none" stroke="#d6926e" strokeWidth="5" opacity=".18" strokeLinecap="round"/>
+      </g>
+
+      <g className="can-drawing" transform={`rotate(${tilt} 220 140)`}>
+        <path d="M76 145 C76 115 96 97 131 95 L186 95 C216 96 235 112 235 143 L235 164 C235 190 211 207 172 210 L128 208 C93 205 73 184 76 145Z" fill="url(#canBody)"/>
+        <path d="M105 101 C103 56 124 33 159 34 C194 35 214 58 211 102" fill="none" stroke="#8c6141" strokeWidth="15" strokeLinecap="round"/>
+        <path d="M111 99 C111 67 128 50 158 50 C187 51 203 68 202 100" fill="none" stroke="#c18d5c" strokeWidth="5" opacity=".38" strokeLinecap="round"/>
+        <path d="M214 119 C261 113 308 94 346 82 L358 94 C316 117 266 137 218 145Z" fill="url(#canSpout)"/>
+        <path d="M346 81 L365 86 L358 96 L344 94Z" fill="#7e563a"/>
+        <path d="M94 136 C105 112 128 104 155 104" fill="none" stroke="#e0b080" strokeWidth="6" opacity=".17" strokeLinecap="round"/>
+      </g>
+
+      <g className="water-drawing" style={{ opacity: waterOpacity }}>
+        <path d="M359 92 C399 109 449 139 498 164" fill="none" stroke="url(#waterLine)" strokeWidth="5" strokeLinecap="round"/>
+        <circle cx="412" cy="119" r="3" fill="#c7e5e1" opacity=".75"/>
+        <circle cx="459" cy="147" r="2.5" fill="#d8ece9" opacity=".82"/>
+        <path d="M498 158 C505 166 504 174 498 178 C491 174 490 166 498 158Z" fill="#c2e2de"/>
+      </g>
+    </svg>
   )
 }
