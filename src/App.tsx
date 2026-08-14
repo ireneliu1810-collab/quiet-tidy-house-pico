@@ -119,10 +119,10 @@ export default function App() {
 }
 
 const ritualCopy: Record<ActivityId, { title: string; instruction: string; mode: 'slide' | 'circle' | 'hold' | 'sweep'; material: string; cue: string; result: string }> = {
-  shelf: { title: '把书送回空位', instruction: '按住倾斜的书脊，沿木格缓缓推入', mode: 'slide', material: '亚麻书脊 · 胡桃木', cue: '听纸页轻擦木格', result: '书脊会与旁边的书慢慢齐平' },
-  repair: { title: '为旧钟重新上弦', instruction: '按住黄铜旋钮，稳定地绕圈', mode: 'circle', material: '黄铜 · 珐琅表盘', cue: '听齿轮逐齿咬合', result: '秒针会重新开始平稳呼吸' },
-  water: { title: '让水慢慢渗进陶土', instruction: '按住壶柄，保持一个舒服的倾角', mode: 'hold', material: '陶壶 · 湿润土壤', cue: '听水珠落进泥土', result: '叶片会一点点舒展开来' },
-  record: { title: '沿着沟槽擦拭唱片', instruction: '按住绒布，顺着唱片缓缓画圈', mode: 'circle', material: '天鹅绒 · 黑胶沟槽', cue: '听细微而均匀的摩擦', result: '浮尘会沿着一整圈离开唱片' },
+  shelf: { title: '让整排书脊齐平', instruction: '按住书挡，缓慢向右推，让每一本依次归位', mode: 'slide', material: '亚麻书脊 · 胡桃木', cue: '听一排纸页轻擦木格', result: '所有书都会同高、同向并贴齐底板' },
+  repair: { title: '校准指针并重新上弦', instruction: '按住右侧上弦钥匙，缓缓转动三圈', mode: 'circle', material: '拉丝黄铜 · 珐琅表盘', cue: '听齿轮逐齿咬合', result: '时针、分针和秒针会重新协调运转' },
+  water: { title: '把水送进花盆中央', instruction: '按住木柄，让细长壶嘴对准土壤再保持', mode: 'hold', material: '哑光铜壶 · 湿润土壤', cue: '听细水流准确落进泥土', result: '水会落在根部，枝叶随后自然舒展' },
+  record: { title: '顺着沟槽擦净黑胶', instruction: '按住绒布，贴着唱片完整绕过三圈', mode: 'circle', material: '天鹅绒 · 黑胶沟槽', cue: '听细微而均匀的摩擦', result: '绒布会沿沟槽带走整圈浮尘' },
   collection: { title: '把收藏品放回软垫', instruction: '托住陶瓷底部，缓缓移向暖光', mode: 'slide', material: '陶瓷 · 羊毛软垫', cue: '听底部轻触软垫', result: '光晕会在摆正时安静下来' },
   desk: { title: '把纸张边缘理齐', instruction: '按住纸面，来回做几次轻柔扫动', mode: 'sweep', material: '棉纸 · 木质桌面', cue: '听纸边一张张靠拢', result: '散开的纸角会慢慢重叠整齐' },
 }
@@ -167,11 +167,25 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
     const rect = event.currentTarget.getBoundingClientRect()
     if (copy.mode === 'slide') {
       advance((event.clientX - rect.left - 45) / (rect.width - 90))
-    } else {
+    } else if (copy.mode === 'circle') {
+      const centerX = rect.left + rect.width * (id === 'repair' ? .66 : .46)
+      const centerY = rect.top + rect.height * .46
+      const previousAngle = Math.atan2(last.current.y - centerY, last.current.x - centerX)
+      const currentAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX)
+      let angleDelta = Math.abs(currentAngle - previousAngle)
+      if (angleDelta > Math.PI) angleDelta = Math.PI * 2 - angleDelta
+      const radius = Math.hypot(event.clientX - centerX, event.clientY - centerY)
+      if (radius > 24 && radius < rect.width * .32) {
+        setProgress(current => {
+          const next = Math.min(1, current + angleDelta / (Math.PI * 6))
+          if (next >= 1 && !done.current) { done.current = true; window.setTimeout(onComplete, 520) }
+          return next
+        })
+      }
+    } else if (copy.mode === 'sweep') {
       const distance = Math.hypot(event.clientX - last.current.x, event.clientY - last.current.y)
       setProgress(current => {
-        const targetDistance = copy.mode === 'circle' ? 780 : copy.mode === 'hold' ? 720 : 920
-        const next = Math.min(1, current + distance / targetDistance)
+        const next = Math.min(1, current + distance / 920)
         if (next >= 1 && !done.current) { done.current = true; window.setTimeout(onComplete, 520) }
         return next
       })
@@ -215,6 +229,8 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
               <div className="gesture-scene">
                 <i className="scene-surface"/><i className="scene-glow"/>
                 <i className="object-a"/><i className="object-b"/><i className="object-c"/>
+                <i className="object-d"/><i className="object-e"/><i className="object-f"/>
+                <i className="object-g"/><i className="object-h"/><i className="object-i"/>
                 <span className="gesture-hand"><i/>{progress > .03 ? '继续' : '按住'}</span>
               </div>
               <div className="gesture-track"><i /></div>
