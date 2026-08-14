@@ -308,21 +308,30 @@ export class QuietRoom {
 
   private buildDeskLamp(parent: THREE.Object3D) {
     const lamp = new THREE.Group()
-    lamp.position.set(-.2, 1.9, -.15)
+    lamp.position.set(-.18, 1.9, -.22)
     parent.add(lamp)
     const metal = this.material(0x4c554f, .42, .62)
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(.28, .33, .08, 32), metal)
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.3, .34, .075, 32), metal)
     base.castShadow = true
     lamp.add(base)
-    const arm = this.rounded([.09, 1.05, .09], 0x56615a, [0, .55, 0], .035, .42, .62, lamp)
-    arm.rotation.z = -.22
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(.35, .48, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x6d756d, roughness: .45, metalness: .42, side: THREE.DoubleSide }))
-    shade.position.set(-.23, 1.12, 0)
-    shade.rotation.z = -.18
+    const lowerArm = this.rounded([.085, .72, .085], 0x56615a, [.13, .38, 0], .034, .42, .62, lamp)
+    lowerArm.rotation.z = -.4
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(.1, 20, 14), metal)
+    elbow.position.set(-.01, .72, 0)
+    lamp.add(elbow)
+    const upperArm = this.rounded([.085, .68, .085], 0x56615a, [-.2, 1.0, 0], .034, .42, .62, lamp)
+    upperArm.rotation.z = .58
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(.14, .36, .34, 36, 1, true), new THREE.MeshStandardMaterial({ color: 0x777c72, roughness: .48, metalness: .38, side: THREE.DoubleSide }))
+    shade.position.set(-.39, 1.31, 0)
+    shade.rotation.z = -.5
     shade.castShadow = true
     lamp.add(shade)
-    const glow = new THREE.Mesh(new THREE.SphereGeometry(.12, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffcf8d }))
-    glow.position.set(-.23, .98, 0)
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.355, .018, 8, 36), metal)
+    rim.position.set(-.47, 1.17, 0)
+    rim.rotation.set(Math.PI / 2, -.5, 0)
+    lamp.add(rim)
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(.105, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffcf8d }))
+    glow.position.set(-.45, 1.18, 0)
     lamp.add(glow)
     this.lampGlow = glow
   }
@@ -330,40 +339,67 @@ export class QuietRoom {
   private buildTeaSet(parent: THREE.Object3D) {
     const tray = this.rounded([1.05, .045, .52], 0x503d2f, [2.42, 1.9, .18], .09, .8, .08, parent)
     tray.rotation.y = -.08
-    const mug = new THREE.Mesh(new THREE.CylinderGeometry(.16, .14, .32, 28, 1, true), this.material(0xb5a483, .82))
-    mug.position.set(2.22, 2.08, .18)
-    mug.castShadow = true
-    parent.add(mug)
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(.12, .028, 8, 24, Math.PI * 1.45), this.material(0xb5a483, .82))
-    handle.position.set(2.39, 2.09, .18)
-    handle.rotation.y = Math.PI / 2
+    const ceramic = this.material(0xb9ad94, .84)
+    const saucer = new THREE.Mesh(new THREE.CylinderGeometry(.23, .25, .025, 32), ceramic)
+    saucer.position.set(2.2, 1.95, .18)
+    parent.add(saucer)
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(.16, .12, .24, 32, 1, true), ceramic)
+    cup.position.set(2.2, 2.08, .18)
+    cup.castShadow = true
+    parent.add(cup)
+    const cupRim = new THREE.Mesh(new THREE.TorusGeometry(.16, .018, 8, 32), ceramic)
+    cupRim.position.set(2.2, 2.205, .18)
+    cupRim.rotation.x = Math.PI / 2
+    parent.add(cupRim)
+    const tea = new THREE.Mesh(new THREE.CircleGeometry(.137, 32), new THREE.MeshStandardMaterial({ color: 0x4e291c, roughness: .34 }))
+    tea.position.set(2.2, 2.197, .18)
+    tea.rotation.x = -Math.PI / 2
+    parent.add(tea)
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.105, .025, 8, 28, Math.PI * 1.55), ceramic)
+    handle.position.set(2.36, 2.09, .18)
+    handle.rotation.z = -.78
     parent.add(handle)
-    const tin = this.rounded([.25, .36, .25], 0x6d7b70, [2.65, 2.08, .15], .07, .62, .18, parent)
-    tin.rotation.y = .1
+    const tinMaterial = this.material(0x718379, .48, .24)
+    const tin = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .28, 24), tinMaterial)
+    tin.position.set(2.68, 2.08, .16)
+    tin.castShadow = true
+    parent.add(tin)
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(.145, .145, .045, 24), tinMaterial)
+    lid.position.set(2.68, 2.24, .16)
+    parent.add(lid)
+    const label = new THREE.Mesh(new THREE.CylinderGeometry(.132, .132, .1, 24, 1, true), this.material(0xa99b76, .75))
+    label.position.set(2.68, 2.07, .16)
+    parent.add(label)
   }
 
   private buildWindow() {
     const window = new THREE.Group()
     window.position.set(4.65, 4.72, -6.78)
     this.scene.add(window)
-    this.rounded([4.05, 3.15, .1], 0x152b32, [0, 0, 0], .06, .22, .05, window)
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(3.74, 2.86), new THREE.MeshPhysicalMaterial({ color: 0x27444a, roughness: .12, metalness: .05, transmission: .04, transparent: true, opacity: .88 }))
+    this.rounded([4.05, 3.15, .1], 0x152b32, [0, 0, -.06], .06, .22, .05, window)
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(3.74, 2.86), new THREE.MeshPhysicalMaterial({ color: 0x27444a, roughness: .12, metalness: .05, transmission: .08, transparent: true, opacity: .58, depthWrite: false }))
     glass.position.z = .07
+    glass.renderOrder = 2
     window.add(glass)
     for (const x of [-2.02, 0, 2.02]) this.rounded([.11, 3.28, .16], 0xa07958, [x, 0, .1], .035, .7, .04, window)
     for (const y of [-1.57, 1.57]) this.rounded([4.18, .11, .16], 0xa07958, [0, y, .1], .035, .7, .04, window)
     const moon = new THREE.Mesh(new THREE.CircleGeometry(.27, 30), new THREE.MeshBasicMaterial({ color: 0xb8cec4, transparent: true, opacity: .44 }))
-    moon.position.set(1.05, .72, .085)
+    moon.position.set(1.05, .72, .005)
+    moon.renderOrder = 0
     window.add(moon)
     for (let i = 0; i < 86; i++) {
       const length = .16 + Math.random() * .44
-      const streak = new THREE.Mesh(new THREE.BoxGeometry(.012, length, .008), new THREE.MeshBasicMaterial({ color: i % 5 ? 0xa7ced0 : 0xe2efea, transparent: true, opacity: .16 + Math.random() * .42 }))
-      streak.position.set(-1.8 + Math.random() * 3.6, -1.35 + Math.random() * 2.7, .1)
+      const streak = new THREE.Mesh(new THREE.BoxGeometry(.012, length, .008), new THREE.MeshBasicMaterial({ color: i % 5 ? 0xa7ced0 : 0xe2efea, transparent: true, opacity: .28 + Math.random() * .44, depthWrite: false }))
+      streak.position.set(-1.25 + Math.random() * 2.95, -1.08 + Math.random() * 2.16, .025)
       streak.rotation.z = -.2
+      streak.renderOrder = 1
       streak.userData.rainSpeed = .012 + Math.random() * .022
       window.add(streak)
       this.rain.push(streak)
     }
+
+    // The interior sill sits in front of the glass, making the rain read as outdoors.
+    this.rounded([4.34, .16, .42], 0x8d664b, [0, -1.63, .25], .055, .76, .04, window)
 
     // Soft curtains frame the opening and add cloth volume.
     for (const side of [-1, 1]) {
@@ -388,7 +424,14 @@ export class QuietRoom {
     this.rounded([.42, .8, 1.88], 0x4d5c54, [-1.1, 1.0, 0], .2, .98, .01, chair)
     this.rounded([.42, .8, 1.88], 0x4d5c54, [1.1, 1.0, 0], .2, .98, .01, chair)
     this.rounded([1.76, .24, 1.35], 0x718076, [0, 1.03, .05], .18, .99, .01, chair)
-    this.rounded([.78, .5, .18], 0x8b775e, [.48, 1.76, -.48], .12, .98, .01, chair).rotation.z = -.18
+    const lumbar = this.rounded([1.38, .72, .3], 0x887862, [0, 1.62, -.37], .2, .99, .01, chair)
+    lumbar.rotation.x = -.08
+    for (const x of [-.36, .36]) {
+      const button = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 10), this.material(0x6e6253, .96))
+      button.scale.z = .32
+      button.position.set(x, 1.62, -.205)
+      chair.add(button)
+    }
     for (const x of [-.82, .82]) for (const z of [-.56, .56]) this.rounded([.12, .48, .12], 0x42352c, [x, .25, z], .035, .66, .24, chair)
 
     const rug = new THREE.Mesh(new THREE.CircleGeometry(3.2, 80), this.material(0x756858, .99))
@@ -398,25 +441,34 @@ export class QuietRoom {
     rug.receiveShadow = true
     this.scene.add(rug)
 
-    // Low table and nested tray details.
+    // Low table with a recognisable tea bowl and saucer.
     const table = new THREE.Group()
     table.position.set(-.25, 0, 1.2)
     this.scene.add(table)
     this.rounded([2.2, .23, 1.35], 0x9a6a4b, [0, .78, 0], .15, .78, .03, table)
     for (const x of [-.82, .82]) for (const z of [-.38, .38]) this.rounded([.14, .72, .14], 0x5b4132, [x, .36, z], .045, .72, .16, table)
-    this.rounded([.9, .04, .58], 0x554237, [.25, .92, -.05], .1, .82, .05, table)
-    const stone = new THREE.Mesh(new THREE.SphereGeometry(.13, 20, 14), this.material(0x818a83, .92))
-    stone.scale.set(1.35, .58, 1)
-    stone.position.set(.28, 1.02, -.03)
-    stone.castShadow = true
-    table.add(stone)
+    const coaster = new THREE.Mesh(new THREE.CylinderGeometry(.29, .31, .035, 36), this.material(0x554237, .82, .05))
+    coaster.position.set(.25, .92, -.05)
+    table.add(coaster)
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(.24, .17, .19, 36, 1, true), this.material(0xa7aa98, .88))
+    bowl.position.set(.25, 1.03, -.05)
+    bowl.castShadow = true
+    table.add(bowl)
+    const bowlRim = new THREE.Mesh(new THREE.TorusGeometry(.24, .018, 8, 36), this.material(0xc1c0aa, .86))
+    bowlRim.position.set(.25, 1.13, -.05)
+    bowlRim.rotation.x = Math.PI / 2
+    table.add(bowlRim)
+    const tea = new THREE.Mesh(new THREE.CircleGeometry(.21, 36), new THREE.MeshStandardMaterial({ color: 0x4a2d20, roughness: .32 }))
+    tea.position.set(.25, 1.122, -.05)
+    tea.rotation.x = -Math.PI / 2
+    table.add(tea)
   }
 
   private buildDecor() {
     this.buildPlant()
     this.buildCollection()
 
-    // Floor lamp: stem, weighted base and layered shade.
+    // Floor lamp: stem, weighted base and a broad linen drum shade.
     const lamp = new THREE.Group()
     lamp.position.set(5.7, 0, -1.9)
     this.scene.add(lamp)
@@ -425,11 +477,17 @@ export class QuietRoom {
     base.castShadow = true
     lamp.add(base)
     this.rounded([.09, 3.55, .09], 0x655a4d, [0, 1.9, 0], .035, .42, .56, lamp)
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(.5, .68, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0xc1aa82, roughness: .96, transparent: true, opacity: .96, side: THREE.DoubleSide }))
+    const shadeMaterial = new THREE.MeshStandardMaterial({ color: 0xc1aa82, roughness: .96, transparent: true, opacity: .96, side: THREE.DoubleSide })
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(.36, .58, .62, 40, 1, true), shadeMaterial)
     shade.position.y = 3.72
-    shade.rotation.x = Math.PI
     shade.castShadow = true
     lamp.add(shade)
+    for (const [radius, y] of [[.36, 4.03], [.58, 3.41]] as const) {
+      const trim = new THREE.Mesh(new THREE.TorusGeometry(radius, .018, 8, 40), this.material(0x8f7557, .78))
+      trim.position.y = y
+      trim.rotation.x = Math.PI / 2
+      lamp.add(trim)
+    }
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffd8a0 }))
     bulb.position.y = 3.56
     lamp.add(bulb)
@@ -552,8 +610,8 @@ export class QuietRoom {
       streak.position.y -= streak.userData.rainSpeed as number
       streak.position.x -= (streak.userData.rainSpeed as number) * .19
       if (streak.position.y < -1.4) {
-        streak.position.y = 1.4
-        streak.position.x = -1.8 + Math.random() * 3.6
+        streak.position.y = 1.18
+        streak.position.x = -1.25 + Math.random() * 2.95
       }
     })
     if (this.lampGlow) this.lampGlow.scale.setScalar(.98 + Math.sin(elapsed * 1.9) * .025)
