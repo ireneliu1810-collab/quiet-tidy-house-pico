@@ -78,7 +78,24 @@ export default function App() {
 
       <header className="header" enable-xr="true" style={spatialStyle(42)}>
         <a className="identity" href="#room" aria-label="静栖放松整理屋">
-          <span>静</span><p><b>静栖</b><small>QUIET TIDY HOUSE</small></p>
+          <svg className="identity-mark" viewBox="0 0 50 50" aria-hidden="true">
+            <defs>
+              <linearGradient id="markFrame" x1="7" y1="5" x2="43" y2="46" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#ead7ae"/><stop offset=".52" stopColor="#afbfaa"/><stop offset="1" stopColor="#8d7352"/>
+              </linearGradient>
+              <radialGradient id="markFill" cx="0" cy="0" r="1" gradientTransform="translate(25 29) rotate(90) scale(22)">
+                <stop stopColor="#31493b"/><stop offset="1" stopColor="#14231c"/>
+              </radialGradient>
+            </defs>
+            <rect className="mark-shell" x="2" y="2" width="46" height="46" rx="15" fill="url(#markFill)" stroke="url(#markFrame)"/>
+            <path className="mark-rain" d="M11.5 13.5 9.5 18M16 10.5l-2 4.5M39 14l-2 4.5"/>
+            <path className="mark-roof" d="M12.5 26 25 15.5 37.5 26"/>
+            <path className="mark-house" d="M16.5 23.3V36h17V23.3"/>
+            <rect className="mark-window" x="21" y="26" width="8" height="10" rx="1.8"/>
+            <path className="mark-window-line" d="M25 26v10M21 31h8"/>
+            <circle className="mark-light" cx="25" cy="31" r="7.5"/>
+          </svg>
+          <p><b>静栖</b><small>QUIET TIDY HOUSE</small></p>
         </a>
         <div className="room-state"><i /><span>雨夜小屋</span><em>自由整理</em></div>
         <button className={`music-control ${musicOn ? 'playing' : ''}`} onClick={toggleMusic} aria-pressed={musicOn}>
