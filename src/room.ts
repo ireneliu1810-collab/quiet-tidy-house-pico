@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { MusicSoundscape } from './soundscape'
 
-export type ActivityId = 'shelf' | 'repair' | 'water' | 'record' | 'collection' | 'desk'
+export type ActivityId = 'shelf' | 'repair' | 'water' | 'record' | 'collection' | 'desk' | 'cat'
 
 export type RoomEvent = {
   id: ActivityId
@@ -48,6 +48,9 @@ export class QuietRoom {
   private soundscape = new MusicSoundscape()
   private rain: THREE.Object3D[] = []
   private lampGlow: THREE.Mesh | null = null
+  private catVisual: THREE.Group | null = null
+  private catTail: THREE.Group | null = null
+  private catHead: THREE.Group | null = null
 
   constructor(private canvas: HTMLCanvasElement, private onRequest: (id: ActivityId) => void) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
@@ -72,6 +75,10 @@ export class QuietRoom {
 
   setAmbient(enabled: boolean) {
     return this.soundscape.setAmbient(enabled)
+  }
+
+  setPetting(enabled: boolean) {
+    return this.soundscape.setPurring(enabled)
   }
 
   private material(color: number, roughness = .72, metalness = .04) {
@@ -517,6 +524,116 @@ export class QuietRoom {
     tea.position.set(.25, 1.122, -.05)
     tea.rotation.x = -Math.PI / 2
     table.add(tea)
+
+    this.buildCat()
+  }
+
+  private buildCat() {
+    const cat = new THREE.Group()
+    cat.position.set(2.8, 1.17, 1.76)
+    cat.rotation.y = .48
+    this.scene.add(cat)
+
+    const visual = new THREE.Group()
+    cat.add(visual)
+    this.catVisual = visual
+
+    const ginger = this.material(0xb9784f, .96)
+    const gingerDark = this.material(0x87523b, .94)
+    const cream = this.material(0xe1c7a2, .98)
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(.48, 32, 22), ginger)
+    body.scale.set(1.28, .62, .9)
+    body.position.set(-.08, .28, 0)
+    body.castShadow = true
+    visual.add(body)
+
+    const haunch = new THREE.Mesh(new THREE.SphereGeometry(.37, 28, 20), gingerDark)
+    haunch.scale.set(1.02, .78, 1)
+    haunch.position.set(-.42, .31, -.02)
+    haunch.castShadow = true
+    visual.add(haunch)
+
+    const head = new THREE.Group()
+    head.position.set(.43, .43, .16)
+    visual.add(head)
+    this.catHead = head
+
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(.31, 30, 22), ginger)
+    skull.scale.set(1, .88, .92)
+    skull.castShadow = true
+    head.add(skull)
+
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(.135, .25, 3), gingerDark)
+      ear.position.set(side * .19, .25, -.015)
+      ear.rotation.z = side * -.16
+      ear.rotation.y = side * .08
+      ear.castShadow = true
+      head.add(ear)
+      const inner = new THREE.Mesh(new THREE.ConeGeometry(.075, .14, 3), this.material(0xd69a7f, .98))
+      inner.position.set(side * .19, .255, .045)
+      inner.rotation.z = side * -.16
+      head.add(inner)
+
+      const eye = this.rounded([.105, .018, .016], 0x302923, [side * .115, .045, .279], .008, .6, .02, head)
+      eye.rotation.z = side * .16
+      const muzzle = new THREE.Mesh(new THREE.SphereGeometry(.105, 20, 14), cream)
+      muzzle.scale.set(1.05, .7, .7)
+      muzzle.position.set(side * .075, -.075, .255)
+      head.add(muzzle)
+    }
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(.038, 16, 12), this.material(0x6f443b, .76))
+    nose.scale.set(1.15, .75, .65)
+    nose.position.set(0, -.055, .342)
+    head.add(nose)
+
+    const whiskerMaterial = new THREE.LineBasicMaterial({ color: 0xd9cab2, transparent: true, opacity: .72 })
+    for (const side of [-1, 1]) {
+      for (let i = -1; i <= 1; i++) {
+        const whisker = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(side * .09, -.08 + i * .035, .32),
+            new THREE.Vector3(side * (.31 + Math.abs(i) * .025), -.09 + i * .065, .35),
+          ]),
+          whiskerMaterial,
+        )
+        head.add(whisker)
+      }
+    }
+
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(.235, .022, 8, 32), this.material(0x5c7d6a, .72, .08))
+    collar.rotation.x = Math.PI / 2
+    collar.position.set(.29, .3, .11)
+    visual.add(collar)
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), this.material(colors.brass, .3, .68))
+    bell.position.set(.31, .23, .35)
+    visual.add(bell)
+
+    for (const [x, z] of [[.23, .31], [.08, .37]] as const) {
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(.13, 22, 14), cream)
+      paw.scale.set(1.15, .56, .9)
+      paw.position.set(x, .13, z)
+      paw.castShadow = true
+      visual.add(paw)
+    }
+
+    const tailGroup = new THREE.Group()
+    visual.add(tailGroup)
+    this.catTail = tailGroup
+    const tailCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-.48, .3, -.02),
+      new THREE.Vector3(-.72, .23, .18),
+      new THREE.Vector3(-.63, .22, .51),
+      new THREE.Vector3(-.28, .24, .63),
+      new THREE.Vector3(.02, .25, .53),
+    ])
+    const tail = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 28, .075, 10, false), gingerDark)
+    tail.castShadow = true
+    tailGroup.add(tail)
+
+    this.addInteractive('cat', cat)
   }
 
   private buildDecor() {
@@ -670,12 +787,19 @@ export class QuietRoom {
       }
     })
     if (this.lampGlow) this.lampGlow.scale.setScalar(.98 + Math.sin(elapsed * 1.9) * .025)
+    if (this.catVisual) {
+      const breathing = 1 + Math.sin(elapsed * 1.45) * .018
+      this.catVisual.scale.set(1, breathing, 1)
+    }
+    if (this.catTail) this.catTail.rotation.y = Math.sin(elapsed * .72) * .025
+    if (this.catHead) this.catHead.rotation.z = this.active?.id === 'cat' ? Math.sin(elapsed * 5.2) * .025 : 0
     if (this.active) {
       const t = Math.min(1, (performance.now() - this.activeStarted) / 1150)
       const pulse = Math.sin(t * Math.PI)
       const mesh = this.active.mesh
-      mesh.position.y = this.active.rest.y + pulse * .1
-      if (this.active.id === 'record') mesh.rotation.y = this.active.rotation.y + t * Math.PI * 2
+      mesh.position.y = this.active.rest.y + pulse * (this.active.id === 'cat' ? .025 : .1)
+      if (this.active.id === 'cat') mesh.rotation.y = this.active.rotation.y + Math.sin(t * Math.PI * 3) * .018
+      else if (this.active.id === 'record') mesh.rotation.y = this.active.rotation.y + t * Math.PI * 2
       else if (this.active.id === 'repair') mesh.rotation.z = this.active.rotation.z + Math.sin(t * Math.PI * 4) * .035
       else mesh.rotation.y = this.active.rotation.y + pulse * .055
       if (t >= 1) {

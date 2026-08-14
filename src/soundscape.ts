@@ -14,6 +14,7 @@ const interactionTone: Record<ActivityId, [number, number]> = {
   record: [440, 659.25],
   collection: [587.33, 739.99],
   desk: [349.23, 523.25],
+  cat: [293.66, 392],
 }
 
 export class MusicSoundscape {
@@ -25,6 +26,8 @@ export class MusicSoundscape {
   private sequenceTimer = 0
   private chordIndex = 0
   private enabled = false
+  private purrGain: GainNode | null = null
+  private purrOscillators: OscillatorNode[] = []
 
   private ensure() {
     if (this.context) return this.context
@@ -164,6 +167,61 @@ export class MusicSoundscape {
     if (id === 'water' || id === 'shelf' || id === 'desk') this.textureBurst(id)
   }
 
+  async setPurring(enabled: boolean) {
+    const context = this.ensure()
+    await context.resume()
+    const now = context.currentTime
+
+    if (!enabled) {
+      if (!this.purrGain) return
+      const gain = this.purrGain
+      gain.gain.cancelScheduledValues(now)
+      gain.gain.setValueAtTime(Math.max(.0001, gain.gain.value), now)
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .24)
+      const oscillators = this.purrOscillators
+      window.setTimeout(() => oscillators.forEach(oscillator => {
+        try { oscillator.stop() } catch { /* already stopped */ }
+      }), 280)
+      this.purrGain = null
+      this.purrOscillators = []
+      return
+    }
+
+    if (this.purrGain) return
+    const output = context.createGain()
+    const warmth = context.createBiquadFilter()
+    output.gain.setValueAtTime(.0001, now)
+    output.gain.exponentialRampToValueAtTime(.032, now + .28)
+    warmth.type = 'lowpass'
+    warmth.frequency.value = 420
+    warmth.Q.value = .55
+    output.connect(warmth).connect(this.master!)
+
+    const carriers = [[74, 'sine', .015], [111, 'triangle', .006], [148, 'sine', .0035]] as const
+    const oscillators: OscillatorNode[] = []
+    carriers.forEach(([frequency, type, volume]) => {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = type
+      oscillator.frequency.value = frequency
+      gain.gain.value = volume
+      oscillator.connect(gain).connect(output)
+      oscillator.start()
+      oscillators.push(oscillator)
+    })
+
+    const pulse = context.createOscillator()
+    const pulseDepth = context.createGain()
+    pulse.type = 'sine'
+    pulse.frequency.value = 23.5
+    pulseDepth.gain.value = .008
+    pulse.connect(pulseDepth).connect(output.gain)
+    pulse.start()
+    oscillators.push(pulse)
+    this.purrGain = output
+    this.purrOscillators = oscillators
+  }
+
   private textureBurst(id: ActivityId) {
     const context = this.context!
     const duration = id === 'water' ? .65 : .28
@@ -188,6 +246,7 @@ export class MusicSoundscape {
   destroy() {
     window.clearInterval(this.sequenceTimer)
     try { this.rain?.stop() } catch { /* already stopped */ }
+    this.purrOscillators.forEach(oscillator => { try { oscillator.stop() } catch { /* already stopped */ } })
     void this.context?.close()
   }
 }

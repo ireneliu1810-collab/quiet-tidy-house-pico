@@ -9,6 +9,7 @@ const activities: Array<{ id: ActivityId; icon: string; title: string; hint: str
   { id: 'record', icon: '◎', title: '擦拭唱片', hint: '唱片架与绒布', number: '04' },
   { id: 'collection', icon: '◇', title: '摆放收藏', hint: '陶瓷与木头', number: '05' },
   { id: 'desk', icon: '▱', title: '收拾桌面', hint: '旧纸与留白', number: '06' },
+  { id: 'cat', icon: '🐾', title: '抚摸小猫', hint: '绒毛与呼噜', number: '07' },
 ]
 
 const events: Record<ActivityId, RoomEvent> = {
@@ -18,6 +19,7 @@ const events: Record<ActivityId, RoomEvent> = {
   record: { id: 'record', label: '唱片回到唱片机旁', detail: '纸套轻响，绒布沿沟槽带走一整圈浮尘。' },
   collection: { id: 'collection', label: '收藏品找到位置', detail: '陶瓷、木头与金属各自安静下来。' },
   desk: { id: 'desk', label: '桌面留出空白', detail: '纸张的边缘被一遍遍轻轻理齐。' },
+  cat: { id: 'cat', label: '猫咪发出满足的呼噜声', detail: '温热的背脊在掌心下缓缓起伏。' },
 }
 
 const spatialStyle = (depth: number, material = 'thin') => ({
@@ -128,7 +130,13 @@ export default function App() {
         <div className="input-note"><kbd>RAY</kbd><span>选择</span><kbd>TRIGGER</kbd><span>轻触</span></div>
       </section>
 
-      {ritual && <RitualOverlay id={ritual} onClose={() => setRitual(null)} onComplete={() => completeRitual(ritual)} />}
+      {ritual && <RitualOverlay
+        id={ritual}
+        onClose={() => setRitual(null)}
+        onComplete={() => completeRitual(ritual)}
+        onGestureStart={() => { if (ritual === 'cat') void roomRef.current?.setPetting(true) }}
+        onGestureEnd={() => { if (ritual === 'cat') void roomRef.current?.setPetting(false) }}
+      />}
 
       <footer><span>{spatialMode ? 'PICO 空间模式' : '桌面预览'} · PORT 5190</span><p><i />选择物件后，用持续动作完成整理</p></footer>
     </main>
@@ -142,9 +150,10 @@ const ritualCopy: Record<ActivityId, { title: string; instruction: string; mode:
   record: { title: '从唱片架取出并擦净黑胶', instruction: '先向右缓慢抽出一张唱片，再托住边缘，用绒布沿沟槽绕三圈', mode: 'circle', material: '纸套 · 黑胶 · 天鹅绒', cue: '先听纸套滑出，再听均匀的沟槽摩擦', result: '擦净的唱片会停在唱片机旁等待播放' },
   collection: { title: '把收藏品放回软垫', instruction: '托住陶瓷底部，缓缓移向暖光', mode: 'slide', material: '陶瓷 · 羊毛软垫', cue: '听底部轻触软垫', result: '光晕会在摆正时安静下来' },
   desk: { title: '把纸张边缘理齐', instruction: '按住纸面，来回做几次轻柔扫动', mode: 'sweep', material: '棉纸 · 木质桌面', cue: '听纸边一张张靠拢', result: '散开的纸角会慢慢重叠整齐' },
+  cat: { title: '顺着毛轻轻抚摸', instruction: '按住猫咪的背部，沿着毛流缓慢来回抚摸', mode: 'sweep', material: '柔软绒毛 · 温热呼吸', cue: '听低低的呼噜声贴近掌心', result: '耳朵会放松，尾尖轻轻回应' },
 }
 
-function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: () => void; onComplete: () => void }) {
+function RitualOverlay({ id, onClose, onComplete, onGestureStart, onGestureEnd }: { id: ActivityId; onClose: () => void; onComplete: () => void; onGestureStart: () => void; onGestureEnd: () => void }) {
   const [progress, setProgress] = useState(0)
   const dragging = useRef(false)
   const last = useRef<{ x: number; y: number } | null>(null)
@@ -152,7 +161,10 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
   const done = useRef(false)
   const copy = ritualCopy[id]
 
-  useEffect(() => () => window.clearInterval(holdTimer.current), [])
+  useEffect(() => () => {
+    window.clearInterval(holdTimer.current)
+    onGestureEnd()
+  }, [onGestureEnd])
 
   const advance = (value: number) => {
     setProgress(current => {
@@ -169,6 +181,7 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
     dragging.current = true
     last.current = { x: event.clientX, y: event.clientY }
     event.currentTarget.setPointerCapture(event.pointerId)
+    onGestureStart()
     if (copy.mode === 'hold') {
       window.clearInterval(holdTimer.current)
       holdTimer.current = window.setInterval(() => setProgress(current => {
@@ -217,6 +230,7 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
     dragging.current = false
     last.current = null
     window.clearInterval(holdTimer.current)
+    onGestureEnd()
   }
 
   const activity = activities.find(item => item.id === id)
@@ -255,7 +269,7 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
             <div className="gesture-stage" style={{ '--progress': progress, '--record-take': recordTake, '--record-wipe': recordWipe } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="slider" tabIndex={0} aria-label={copy.instruction} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
               <div className="gesture-scene">
                 <i className="scene-surface"/><i className="scene-glow"/>
-                {id === 'water' ? <WateringIllustration progress={progress}/> : <>
+                {id === 'water' ? <WateringIllustration progress={progress}/> : id === 'cat' ? <CatPettingIllustration progress={progress}/> : <>
                   <i className="object-a"/><i className="object-b"/><i className="object-c"/>
                   <i className="object-d"/><i className="object-e"/><i className="object-f"/>
                   <i className="object-g"/><i className="object-h"/><i className="object-i"/>
@@ -264,13 +278,60 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
               </div>
               <div className="gesture-track"><i /></div>
             </div>
-            <div className="gesture-status"><i className={progress > 0 ? 'awake' : ''}/><b>{progress >= 1 ? '刚刚好，听它安静下来' : id === 'record' && progress < .22 ? '先感受纸套松开的轻微阻力' : copy.mode === 'hold' ? '保持住，不必加快' : '跟着物件的阻力慢慢移动'}</b><span>随时可以松手</span></div>
+            <div className="gesture-status"><i className={progress > 0 ? 'awake' : ''}/><b>{progress >= 1 ? id === 'cat' ? '它眯着眼睛，呼噜声更近了' : '刚刚好，听它安静下来' : id === 'cat' ? '顺着背部来回抚摸，不必用力' : id === 'record' && progress < .22 ? '先感受纸套松开的轻微阻力' : copy.mode === 'hold' ? '保持住，不必加快' : '跟着物件的阻力慢慢移动'}</b><span>随时可以松手</span></div>
           </div>
         </div>
 
         <footer className="ritual-note"><i />没有倒计时，也没有做错。让手找到舒服的速度。</footer>
       </div>
     </div>
+  )
+}
+
+function CatPettingIllustration({ progress }: { progress: number }) {
+  const response = Math.min(1, progress * 3)
+  return (
+    <svg className="cat-illustration" viewBox="0 0 620 280" aria-hidden="true">
+      <defs>
+        <linearGradient id="catFur" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#d79a6d"/><stop offset=".55" stopColor="#b8754f"/><stop offset="1" stopColor="#81503b"/>
+        </linearGradient>
+        <linearGradient id="catCream" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f0d8b8"/><stop offset="1" stopColor="#cba783"/>
+        </linearGradient>
+        <radialGradient id="catCushion">
+          <stop offset="0" stopColor="#718579"/><stop offset="1" stopColor="#35483e"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="315" cy="226" rx="242" ry="39" fill="url(#catCushion)" opacity=".72"/>
+      <ellipse cx="315" cy="232" rx="205" ry="20" fill="#17231d" opacity=".34"/>
+
+      <g className="purr-rings" opacity={response}>
+        <path d="M451 84 C480 98 480 128 452 141"/><path d="M470 68 C516 92 517 136 475 160"/>
+      </g>
+
+      <g className="cat-drawing" style={{ transform: `translateY(${Math.sin(progress * Math.PI * 8) * 1.5}px)` }}>
+        <path d="M181 179 C133 173 113 139 126 111 C139 83 177 88 185 119 C191 145 169 163 143 157" fill="none" stroke="#8d573f" strokeWidth="21" strokeLinecap="round"/>
+        <ellipse cx="299" cy="159" rx="151" ry="71" fill="url(#catFur)"/>
+        <ellipse cx="226" cy="145" rx="66" ry="57" fill="#9b5d43" opacity=".72"/>
+        <path d="M201 104 C215 122 218 151 210 179 M242 94 C254 115 258 143 252 178 M285 91 C295 111 300 132 299 154" fill="none" stroke="#754635" strokeWidth="9" strokeLinecap="round" opacity=".52"/>
+
+        <g transform="translate(408 126)">
+          <path d="M-50 -24 L-39 -78 L-5 -38 M27 -40 L61 -78 L61 -17" fill="#a96649" stroke="#8b523c" strokeWidth="6" strokeLinejoin="round"/>
+          <path d="M-38 -41 L-34 -62 L-20 -43 M39 -44 L53 -63 L51 -36" fill="#d99b83" opacity=".75"/>
+          <ellipse cx="7" cy="9" rx="75" ry="64" fill="url(#catFur)"/>
+          <ellipse cx="-13" cy="26" rx="29" ry="20" fill="url(#catCream)"/><ellipse cx="25" cy="26" rx="29" ry="20" fill="url(#catCream)"/>
+          <path d="M-38 2 Q-24 14 -10 2 M25 2 Q39 14 53 1" fill="none" stroke="#332b26" strokeWidth="5" strokeLinecap="round"/>
+          <path d="M3 23 Q8 17 14 23 Q9 31 3 23Z" fill="#75453e"/>
+          <path d="M8 29 Q7 39 -1 42 M8 29 Q10 39 19 42" fill="none" stroke="#5d4338" strokeWidth="3" strokeLinecap="round"/>
+          <path d="M-8 29 L-65 19 M-9 37 L-69 39 M23 29 L76 17 M23 37 L82 39" stroke="#ddc9ae" strokeWidth="2.4" strokeLinecap="round" opacity=".78"/>
+        </g>
+
+        <ellipse cx="355" cy="202" rx="48" ry="22" fill="url(#catCream)" transform="rotate(-8 355 202)"/>
+        <ellipse cx="401" cy="199" rx="46" ry="21" fill="url(#catCream)" transform="rotate(7 401 199)"/>
+        <path d="M357 198 L355 211 M376 196 L376 211 M403 195 L404 208 M421 196 L423 207" stroke="#a77b60" strokeWidth="2" opacity=".58"/>
+      </g>
+    </svg>
   )
 }
 
