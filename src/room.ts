@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { MusicSoundscape } from './soundscape'
 
 export type ActivityId = 'shelf' | 'repair' | 'water' | 'record' | 'collection' | 'desk'
 
@@ -33,7 +34,7 @@ export class QuietRoom {
   private active: Interactive | null = null
   private activeStarted = 0
   private frame = 0
-  private audio: AudioContext | null = null
+  private soundscape = new MusicSoundscape()
 
   constructor(private canvas: HTMLCanvasElement, private onActivity: (event: RoomEvent) => void) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
@@ -42,8 +43,8 @@ export class QuietRoom {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.05
-    this.camera.position.set(0, 3.25, 9.6)
+    this.renderer.toneMappingExposure = 1.22
+    this.camera.position.set(0, 3.35, 10.7)
     this.camera.lookAt(0, 2.6, -3)
     this.buildRoom()
     this.resize()
@@ -54,6 +55,10 @@ export class QuietRoom {
   trigger(id: ActivityId) {
     const item = this.interactives.find(entry => entry.id === id)
     if (item) this.activate(item)
+  }
+
+  setAmbient(enabled: boolean) {
+    return this.soundscape.setAmbient(enabled)
   }
 
   private mat(color: number, roughness = .72, metalness = .05) {
@@ -70,10 +75,10 @@ export class QuietRoom {
   }
 
   private buildRoom() {
-    this.scene.background = new THREE.Color(0x26342d)
-    this.scene.fog = new THREE.FogExp2(0x26342d, .028)
-    this.scene.add(new THREE.HemisphereLight(0xffefd2, 0x24342b, 2.2))
-    const lamp = new THREE.PointLight(palette.glow, 80, 22, 2)
+    this.scene.background = new THREE.Color(0x2a3b31)
+    this.scene.fog = new THREE.FogExp2(0x26342d, .022)
+    this.scene.add(new THREE.HemisphereLight(0xffefd2, 0x24342b, 2.8))
+    const lamp = new THREE.PointLight(palette.glow, 112, 23, 2)
     lamp.position.set(-2.8, 5.2, 1.5)
     lamp.castShadow = true
     this.scene.add(lamp)
@@ -235,30 +240,9 @@ export class QuietRoom {
       collection: { id: 'collection', label: '收藏品找到位置', detail: '陶瓷、木头与金属各自安静下来。' },
       desk: { id: 'desk', label: '桌面留出空白', detail: '纸张的边缘被轻轻理齐。' },
     }
-    this.sound(item.id)
+    void this.soundscape.interaction(item.id)
     navigator.vibrate?.(item.id === 'water' ? [18, 32, 14] : [20])
     this.onActivity(copy[item.id])
-  }
-
-  private sound(id: ActivityId) {
-    this.audio ??= new AudioContext()
-    if (this.audio.state === 'suspended') void this.audio.resume()
-    const now = this.audio.currentTime
-    const gain = this.audio.createGain()
-    const filter = this.audio.createBiquadFilter()
-    gain.gain.setValueAtTime(.0001, now)
-    gain.gain.exponentialRampToValueAtTime(id === 'record' ? .055 : .035, now + .018)
-    gain.gain.exponentialRampToValueAtTime(.0001, now + .55)
-    filter.type = 'lowpass'
-    filter.frequency.value = id === 'water' ? 1100 : id === 'repair' ? 2100 : 850
-    gain.connect(filter).connect(this.audio.destination)
-    const osc = this.audio.createOscillator()
-    osc.type = id === 'record' ? 'sine' : 'triangle'
-    osc.frequency.setValueAtTime({ shelf: 160, repair: 440, water: 285, record: 96, collection: 220, desk: 145 }[id], now)
-    osc.frequency.exponentialRampToValueAtTime(id === 'water' ? 150 : 92, now + .52)
-    osc.connect(gain)
-    osc.start(now)
-    osc.stop(now + .58)
   }
 
   private animate = () => {
@@ -306,6 +290,6 @@ export class QuietRoom {
     this.canvas.removeEventListener('pointerdown', this.onPointerDown)
     window.removeEventListener('resize', this.resize)
     this.renderer.dispose()
-    void this.audio?.close()
+    this.soundscape.destroy()
   }
 }

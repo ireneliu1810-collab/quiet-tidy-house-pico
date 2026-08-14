@@ -2,13 +2,13 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Spatial } from '@webspatial/core-sdk'
 import { QuietRoom, type ActivityId, type RoomEvent } from './room'
 
-const activities: Array<{ id: ActivityId; icon: string; title: string; hint: string }> = [
-  { id: 'shelf', icon: '▥', title: '整理书架', hint: '让书脊慢慢对齐' },
-  { id: 'repair', icon: '◷', title: '修复旧物', hint: '听一枚齿轮重新转动' },
-  { id: 'water', icon: '♧', title: '给植物浇水', hint: '把水交给叶片与陶土' },
-  { id: 'record', icon: '◎', title: '擦拭唱片', hint: '拂去细尘与微小底噪' },
-  { id: 'collection', icon: '◇', title: '摆放收藏品', hint: '为喜欢的东西留一个位置' },
-  { id: 'desk', icon: '▱', title: '收拾桌面', hint: '整理出一小片空白' },
+const activities: Array<{ id: ActivityId; icon: string; title: string; hint: string; number: string }> = [
+  { id: 'shelf', icon: '▥', title: '整理书架', hint: '纸页与木格', number: '01' },
+  { id: 'repair', icon: '◷', title: '修复旧钟', hint: '齿轮与黄铜', number: '02' },
+  { id: 'water', icon: '♧', title: '给植物浇水', hint: '水珠与陶土', number: '03' },
+  { id: 'record', icon: '◎', title: '擦拭唱片', hint: '绒布与黑胶', number: '04' },
+  { id: 'collection', icon: '◇', title: '摆放收藏', hint: '陶瓷与木头', number: '05' },
+  { id: 'desk', icon: '▱', title: '收拾桌面', hint: '旧纸与留白', number: '06' },
 ]
 
 const spatialStyle = (depth: number, material = 'thin') => ({
@@ -20,16 +20,17 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const roomRef = useRef<QuietRoom | null>(null)
   const [spatialMode, setSpatialMode] = useState(false)
-  const [soundOn, setSoundOn] = useState(true)
-  const [event, setEvent] = useState<RoomEvent>({ id: 'desk', label: '今晚没有必须完成的事', detail: '选一件顺手的小事，或只是待在这里听雨。' })
-  const [recent, setRecent] = useState<ActivityId[]>([])
+  const [musicOn, setMusicOn] = useState(false)
+  const [event, setEvent] = useState<RoomEvent>({ id: 'desk', label: '今晚，不必完成什么', detail: '挑一件顺手的小事，或者只是坐下来听雨。' })
+  const [active, setActive] = useState<ActivityId | null>(null)
 
   useEffect(() => {
     try { setSpatialMode(new Spatial().runInSpatialWeb()) } catch { setSpatialMode(false) }
     if (!canvasRef.current) return
     const room = new QuietRoom(canvasRef.current, next => {
       setEvent(next)
-      setRecent(items => [next.id, ...items.filter(item => item !== next.id)].slice(0, 3))
+      setActive(next.id)
+      window.setTimeout(() => setActive(current => current === next.id ? null : current), 1700)
     })
     roomRef.current = room
     return () => room.destroy()
@@ -41,82 +42,62 @@ export default function App() {
     if (!/PicoBrowser|PicoWebApp/i.test(navigator.userAgent)) return
     const target = new URL(window.location.href)
     target.searchParams.delete('pico-spatial-launch')
-    const config = JSON.stringify({
-      type: 'window',
-      defaultSize: { width: '1600px', height: '1000px' },
-      worldScaling: 'automatic',
-      worldAlignment: 'adaptive',
-    })
+    const config = JSON.stringify({ type: 'window', defaultSize: { width: '1600px', height: '1000px' }, worldScaling: 'automatic', worldAlignment: 'adaptive' })
     const spatialUrl = `webspatial://createSpatialScene?url=${encodeURIComponent(target.toString())}&config=${encodeURIComponent(config)}`
     const timer = window.setTimeout(() => window.open(spatialUrl, '_blank'), 420)
     return () => window.clearTimeout(timer)
   }, [spatialMode])
 
-  const trigger = (id: ActivityId) => {
-    if (!soundOn) {
-      const OriginalAudioContext = window.AudioContext
-      Object.defineProperty(window, 'AudioContext', { configurable: true, value: class extends OriginalAudioContext { createGain() { const gain = super.createGain(); gain.gain.value = 0; return gain } } })
-      roomRef.current?.trigger(id)
-      Object.defineProperty(window, 'AudioContext', { configurable: true, value: OriginalAudioContext })
-      return
-    }
-    roomRef.current?.trigger(id)
+  const toggleMusic = () => {
+    const next = !musicOn
+    setMusicOn(next)
+    void roomRef.current?.setAmbient(next)
   }
 
   return (
     <main className="app">
-      <div className="grain" />
-      <header className="topbar soft-panel" enable-xr="true" style={spatialStyle(36)}>
-        <div className="brand-mark"><span>静</span><i /></div>
-        <div className="brand-copy"><small>QUIET TIDY HOUSE · PICO WEBSPATIAL</small><h1>静栖 <em>放松整理屋</em></h1></div>
-        <div className="evening"><span><i />雨夜 · 22:18</span><b>{spatialMode ? '空间模式已就绪' : '桌面预览模式'}</b></div>
+      <div className="scene" enable-xr="true" style={spatialStyle(148, 'transparent')}>
+        <canvas ref={canvasRef} aria-label="雨夜放松整理屋三维场景" />
+        <div className="cinematic-light" />
+        <div className="scene-shade" />
+      </div>
+
+      <header className="header" enable-xr="true" style={spatialStyle(42)}>
+        <a className="identity" href="#room" aria-label="静栖放松整理屋">
+          <span>静</span><p><b>静栖</b><small>QUIET TIDY HOUSE</small></p>
+        </a>
+        <div className="room-state"><i /><span>雨夜小屋</span><em>自由整理</em></div>
+        <button className={`music-control ${musicOn ? 'playing' : ''}`} onClick={toggleMusic}>
+          <div className="music-bars"><i /><i /><i /><i /></div>
+          <p><small>{musicOn ? 'NOW PLAYING' : 'GENERATIVE SOUNDSCAPE'}</small><b>{musicOn ? '雨檐与灯火' : '播放雨夜音乐'}</b></p>
+          <span>{musicOn ? 'Ⅱ' : '▶'}</span>
+        </button>
       </header>
 
-      <section className="room-layout">
-        <aside className="side-panel soft-panel" enable-xr="true" style={spatialStyle(74)}>
-          <div className="section-label"><span>01</span><p><small>CHOOSE A GENTLE ACTION</small><b>随手做一点</b></p></div>
-          <p className="intro">没有清单，也没有完成度。每次触碰只是让这间小屋更像今晚的你。</p>
-          <div className="activity-list">
-            {activities.map(item => (
-              <button key={item.id} className={recent.includes(item.id) ? 'touched' : ''} onClick={() => trigger(item.id)}>
-                <span>{item.icon}</span><p><b>{item.title}</b><small>{item.hint}</small></p><i>→</i>
-              </button>
-            ))}
-          </div>
-          <div className="permission-note"><i>∿</i><p><b>你可以随时停下</b><span>停留、看看窗外，或者离开，都算刚刚好。</span></p></div>
-        </aside>
-
-        <section className="scene-column">
-          <div className="scene-meta"><span>RAIN ROOM / FREE PLAY</span><b><i />无计时 · 无失败 · 无关卡</b></div>
-          <div className="scene-shell" enable-xr="true" style={spatialStyle(138, 'transparent')}>
-            <canvas ref={canvasRef} aria-label="雨夜放松整理屋三维场景" />
-            <div className="scene-vignette" />
-            <div className="touch-guide"><span>轻轻触碰房间里的物品</span><i>书架 · 旧钟 · 植物 · 唱片 · 收藏品 · 纸张</i></div>
-            <div className="breath"><i /><span>慢慢吸气</span><i /><span>慢慢呼气</span></div>
-          </div>
-          <div className="now-playing soft-panel" enable-xr="true" style={spatialStyle(104)}>
-            <div className="sound-wave"><i /><i /><i /><i /><i /></div>
-            <p><small>THE ROOM RESPONDS</small><b>{event.label}</b><span>{event.detail}</span></p>
-            <button onClick={() => setSoundOn(value => !value)}><span>{soundOn ? '◖))' : '◖'}</span>{soundOn ? '环境声音开启' : '安静模式'}</button>
-          </div>
-        </section>
-
-        <aside className="mood-panel soft-panel" enable-xr="true" style={spatialStyle(78)}>
-          <div className="section-label"><span>02</span><p><small>ROOM ATMOSPHERE</small><b>今晚的质感</b></p></div>
-          <div className="weather-orb"><div><i /><i /><i /><span>☾</span></div><p><small>窗外</small><b>细雨落在旧屋檐</b></p></div>
-          <div className="texture-grid">
-            <article><span className="wood" /><p><b>温润木纹</b><small>低沉 · 柔和</small></p></article>
-            <article><span className="ceramic" /><p><b>粗陶表面</b><small>干燥 · 安静</small></p></article>
-            <article><span className="paper" /><p><b>旧纸纤维</b><small>轻盈 · 沙沙</small></p></article>
-          </div>
-          <div className="ritual-card"><small>SLEEP RITUAL</small><b>睡前建议</b><p>只选两三件最顺手的物品。做完后，留一分钟给窗外的雨。</p><div><span /><span /><span /></div></div>
-          <div className="input-hint"><kbd>RAY</kbd><span>手柄射线选择</span><kbd>TRIGGER</kbd><span>轻触物品</span></div>
-        </aside>
+      <section className="hero-copy" id="room" enable-xr="true" style={spatialStyle(70)}>
+        <small>NO SCORES · NO FAILURE · NO RUSH</small>
+        <h1>让房间<br/><em>慢慢安静</em></h1>
+        <p>没有清单，也没有完成度。<br/>只听手边的物件，回到它们合适的位置。</p>
       </section>
 
-      <footer className="footer soft-panel" enable-xr="true" style={spatialStyle(48)}>
-        <span>静栖不是一份待办清单。</span><b>PORT 5190 · PICO WEBSPATIAL · PROTOTYPE 0.1</b>
-      </footer>
+      <div className={`response ${active ? 'visible' : ''}`} enable-xr="true" style={spatialStyle(112)} role="status">
+        <span>{activities.find(item => item.id === event.id)?.icon}</span>
+        <p><small>THE ROOM RESPONDS</small><b>{event.label}</b><em>{event.detail}</em></p>
+      </div>
+
+      <section className="ritual-dock" enable-xr="true" style={spatialStyle(92)} aria-label="整理活动">
+        <div className="dock-intro"><small>CHOOSE ONE</small><b>随手做一点</b><span>随时停下也很好</span></div>
+        <div className="activity-row">
+          {activities.map(item => (
+            <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => roomRef.current?.trigger(item.id)}>
+              <small>{item.number}</small><span>{item.icon}</span><p><b>{item.title}</b><em>{item.hint}</em></p>
+            </button>
+          ))}
+        </div>
+        <div className="input-note"><kbd>RAY</kbd><span>选择</span><kbd>TRIGGER</kbd><span>轻触</span></div>
+      </section>
+
+      <footer><span>{spatialMode ? 'PICO 空间模式' : '桌面预览'} · PORT 5190</span><p><i />环境声音会在你主动播放后开始</p></footer>
     </main>
   )
 }
