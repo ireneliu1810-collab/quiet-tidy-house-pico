@@ -6,7 +6,7 @@ const activities: Array<{ id: ActivityId; icon: string; title: string; hint: str
   { id: 'shelf', icon: '▥', title: '整理书架', hint: '纸页与木格', number: '01' },
   { id: 'repair', icon: '◷', title: '修复旧钟', hint: '齿轮与黄铜', number: '02' },
   { id: 'water', icon: '♧', title: '给植物浇水', hint: '水珠与陶土', number: '03' },
-  { id: 'record', icon: '◎', title: '擦拭唱片', hint: '绒布与黑胶', number: '04' },
+  { id: 'record', icon: '◎', title: '擦拭唱片', hint: '唱片架与绒布', number: '04' },
   { id: 'collection', icon: '◇', title: '摆放收藏', hint: '陶瓷与木头', number: '05' },
   { id: 'desk', icon: '▱', title: '收拾桌面', hint: '旧纸与留白', number: '06' },
 ]
@@ -15,7 +15,7 @@ const events: Record<ActivityId, RoomEvent> = {
   shelf: { id: 'shelf', label: '书脊轻轻归位', detail: '木格与纸页发出柔和的沙沙声。' },
   repair: { id: 'repair', label: '旧钟重新呼吸', detail: '小齿轮传来干净而克制的咔嗒声。' },
   water: { id: 'water', label: '叶片接住水珠', detail: '水落进陶土，叶片慢慢舒展开来。' },
-  record: { id: 'record', label: '唱片擦拭完成', detail: '绒布划过一整圈，细小灰尘离开沟槽。' },
+  record: { id: 'record', label: '唱片回到唱片机旁', detail: '纸套轻响，绒布沿沟槽带走一整圈浮尘。' },
   collection: { id: 'collection', label: '收藏品找到位置', detail: '陶瓷、木头与金属各自安静下来。' },
   desk: { id: 'desk', label: '桌面留出空白', detail: '纸张的边缘被一遍遍轻轻理齐。' },
 }
@@ -122,7 +122,7 @@ const ritualCopy: Record<ActivityId, { title: string; instruction: string; mode:
   shelf: { title: '让整排书脊齐平', instruction: '按住书挡，缓慢向右推，让每一本依次归位', mode: 'slide', material: '亚麻书脊 · 胡桃木', cue: '听一排纸页轻擦木格', result: '所有书都会同高、同向并贴齐底板' },
   repair: { title: '校准指针并重新上弦', instruction: '按住右侧上弦钥匙，缓缓转动三圈', mode: 'circle', material: '拉丝黄铜 · 珐琅表盘', cue: '听齿轮逐齿咬合', result: '时针、分针和秒针会重新协调运转' },
   water: { title: '把水送进花盆中央', instruction: '按住木柄，让细长壶嘴对准土壤再保持', mode: 'hold', material: '哑光铜壶 · 湿润土壤', cue: '听细水流准确落进泥土', result: '水会落在根部，枝叶随后自然舒展' },
-  record: { title: '顺着沟槽擦净黑胶', instruction: '按住绒布，贴着唱片完整绕过三圈', mode: 'circle', material: '天鹅绒 · 黑胶沟槽', cue: '听细微而均匀的摩擦', result: '绒布会沿沟槽带走整圈浮尘' },
+  record: { title: '从唱片架取出并擦净黑胶', instruction: '先向右缓慢抽出一张唱片，再托住边缘，用绒布沿沟槽绕三圈', mode: 'circle', material: '纸套 · 黑胶 · 天鹅绒', cue: '先听纸套滑出，再听均匀的沟槽摩擦', result: '擦净的唱片会停在唱片机旁等待播放' },
   collection: { title: '把收藏品放回软垫', instruction: '托住陶瓷底部，缓缓移向暖光', mode: 'slide', material: '陶瓷 · 羊毛软垫', cue: '听底部轻触软垫', result: '光晕会在摆正时安静下来' },
   desk: { title: '把纸张边缘理齐', instruction: '按住纸面，来回做几次轻柔扫动', mode: 'sweep', material: '棉纸 · 木质桌面', cue: '听纸边一张张靠拢', result: '散开的纸角会慢慢重叠整齐' },
 }
@@ -165,10 +165,13 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
   const pointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current || !last.current || done.current) return
     const rect = event.currentTarget.getBoundingClientRect()
-    if (copy.mode === 'slide') {
+    if (id === 'record' && progress < .22) {
+      const distance = Math.max(0, event.clientX - last.current.x)
+      setProgress(current => Math.min(.22, current + distance / 420))
+    } else if (copy.mode === 'slide') {
       advance((event.clientX - rect.left - 45) / (rect.width - 90))
     } else if (copy.mode === 'circle') {
-      const centerX = rect.left + rect.width * (id === 'repair' ? .66 : .46)
+      const centerX = rect.left + rect.width * (id === 'repair' ? .66 : id === 'record' ? .57 : .46)
       const centerY = rect.top + rect.height * .46
       const previousAngle = Math.atan2(last.current.y - centerY, last.current.x - centerX)
       const currentAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX)
@@ -177,7 +180,7 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
       const radius = Math.hypot(event.clientX - centerX, event.clientY - centerY)
       if (radius > 24 && radius < rect.width * .32) {
         setProgress(current => {
-          const next = Math.min(1, current + angleDelta / (Math.PI * 6))
+          const next = Math.min(1, current + angleDelta / (Math.PI * 6) * (id === 'record' ? .78 : 1))
           if (next >= 1 && !done.current) { done.current = true; window.setTimeout(onComplete, 520) }
           return next
         })
@@ -201,6 +204,13 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
 
   const activity = activities.find(item => item.id === id)
   const percent = Math.round(progress * 100)
+  const recordTake = id === 'record' ? Math.min(1, progress / .22) : 0
+  const recordWipe = id === 'record' ? Math.max(0, (progress - .22) / .78) : 0
+  const gestureLabel = id === 'record'
+    ? progress < .22 ? '按住 · 向右抽出' : '托住 · 沿沟槽绕圈'
+    : copy.mode === 'hold' ? '按住 · 保持'
+      : copy.mode === 'circle' ? '按住 · 绕圈'
+        : copy.mode === 'sweep' ? '按住 · 轻扫' : '按住 · 慢推'
 
   return (
     <div className="ritual-overlay" role="dialog" aria-modal="true" aria-label={copy.title}>
@@ -224,8 +234,8 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
           </aside>
 
           <div className="gesture-panel">
-            <div className="gesture-caption"><span>{copy.mode === 'hold' ? '按住 · 保持' : copy.mode === 'circle' ? '按住 · 绕圈' : copy.mode === 'sweep' ? '按住 · 轻扫' : '按住 · 慢推'}</span><b>{percent}<small>%</small></b></div>
-            <div className="gesture-stage" style={{ '--progress': progress } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="slider" tabIndex={0} aria-label={copy.instruction} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+            <div className="gesture-caption"><span>{gestureLabel}</span><b>{percent}<small>%</small></b></div>
+            <div className="gesture-stage" style={{ '--progress': progress, '--record-take': recordTake, '--record-wipe': recordWipe } as CSSProperties} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="slider" tabIndex={0} aria-label={copy.instruction} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
               <div className="gesture-scene">
                 <i className="scene-surface"/><i className="scene-glow"/>
                 {id === 'water' ? <WateringIllustration progress={progress}/> : <>
@@ -237,7 +247,7 @@ function RitualOverlay({ id, onClose, onComplete }: { id: ActivityId; onClose: (
               </div>
               <div className="gesture-track"><i /></div>
             </div>
-            <div className="gesture-status"><i className={progress > 0 ? 'awake' : ''}/><b>{progress >= 1 ? '刚刚好，听它安静下来' : copy.mode === 'hold' ? '保持住，不必加快' : '跟着物件的阻力慢慢移动'}</b><span>随时可以松手</span></div>
+            <div className="gesture-status"><i className={progress > 0 ? 'awake' : ''}/><b>{progress >= 1 ? '刚刚好，听它安静下来' : id === 'record' && progress < .22 ? '先感受纸套松开的轻微阻力' : copy.mode === 'hold' ? '保持住，不必加快' : '跟着物件的阻力慢慢移动'}</b><span>随时可以松手</span></div>
           </div>
         </div>
 

@@ -274,24 +274,53 @@ export class QuietRoom {
   }
 
   private buildRecord(parent: THREE.Object3D) {
-    const record = new THREE.Group()
-    record.position.set(1.3, 1.895, .14)
-    parent.add(record)
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(.68, .68, .045, 72), new THREE.MeshPhysicalMaterial({ color: 0x101413, roughness: .2, metalness: .16, clearcoat: .8, clearcoatRoughness: .18 }))
-    disc.castShadow = true
-    record.add(disc)
-    const label = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .052, 36), this.material(0xc98c65, .68))
-    label.position.y = .012
-    record.add(label)
-    for (const radius of [.29, .38, .48, .58, .64]) {
-      const groove = new THREE.Mesh(new THREE.TorusGeometry(radius, .006, 5, 64), this.material(0x59605c, .38, .28))
+    const player = new THREE.Group()
+    player.position.set(1.18, 1.89, .12)
+    parent.add(player)
+    this.rounded([1.56, .13, 1.22], 0x4c382d, [0, .075, 0], .11, .74, .08, player)
+    const platter = new THREE.Mesh(new THREE.CylinderGeometry(.52, .52, .055, 64), this.material(0x343a36, .54, .18))
+    platter.position.set(-.17, .17, .02)
+    platter.castShadow = true
+    player.add(platter)
+    for (const radius of [.38, .47]) {
+      const groove = new THREE.Mesh(new THREE.TorusGeometry(radius, .006, 5, 64), this.material(0x626962, .42, .26))
       groove.rotation.x = Math.PI / 2
-      groove.position.y = .03
-      record.add(groove)
+      groove.position.set(-.17, .2, .02)
+      player.add(groove)
     }
-    const felt = this.rounded([1.65, .025, 1.65], 0x324239, [1.3, 1.86, .14], .12, .96, .01, parent)
-    felt.receiveShadow = true
-    this.addInteractive('record', record)
+    const spindle = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .1, 16), this.material(colors.brass, .28, .72))
+    spindle.position.set(-.17, .24, .02)
+    player.add(spindle)
+    const pivot = new THREE.Mesh(new THREE.CylinderGeometry(.12, .14, .11, 24), this.material(0x88775f, .4, .56))
+    pivot.position.set(.52, .2, -.38)
+    player.add(pivot)
+    const tonearm = this.rounded([.045, .045, .68], 0xb1a184, [.39, .27, -.11], .018, .36, .62, player)
+    tonearm.rotation.y = -.42
+    const cartridge = this.rounded([.13, .055, .18], 0x383c38, [.24, .25, .19], .025, .48, .28, player)
+    cartridge.rotation.y = -.42
+    const power = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .025, 18), this.material(0xc59b62, .32, .68))
+    power.position.set(.57, .17, .4)
+    player.add(power)
+
+    // A floor rack keeps the records together instead of leaving one loose on the desk.
+    const storage = new THREE.Group()
+    storage.position.set(3.48, .04, -.04)
+    parent.add(storage)
+    this.rounded([1.04, .14, .82], 0x6c4936, [0, .09, 0], .055, .82, .04, storage)
+    this.rounded([.13, .98, .82], 0x75513b, [-.46, .54, 0], .055, .8, .04, storage)
+    this.rounded([.13, .98, .82], 0x75513b, [.46, .54, 0], .055, .8, .04, storage)
+    this.rounded([1.04, .98, .1], 0x5b3d30, [0, .54, -.36], .04, .84, .03, storage)
+    const sleeves = new THREE.Group()
+    storage.add(sleeves)
+    const sleeveColors = [0x9b6a52, 0x617a70, 0xc09b6d, 0x53656c, 0x8d7357, 0x6e8065, 0xaa765b, 0x7f6f62]
+    for (let i = 0; i < sleeveColors.length; i++) {
+      const x = -.31 + i * .087
+      const sleeve = this.rounded([.065, .76, .67], sleeveColors[i], [x, .55 + (i % 2) * .012, .015], .018, .88, .01, sleeves)
+      sleeve.rotation.z = (i - 3.5) * .008
+      const label = this.rounded([.069, .17, .2], i % 2 ? 0xd1b984 : 0xb7c2ac, [x, .58, .355], .014, .82, .01, sleeves)
+      label.rotation.z = sleeve.rotation.z
+    }
+    this.addInteractive('record', sleeves)
   }
 
   private buildPapers(parent: THREE.Object3D) {
