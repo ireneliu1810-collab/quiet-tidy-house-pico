@@ -543,7 +543,7 @@ export class QuietRoom {
 
     const shadow = new THREE.Mesh(
       new THREE.CircleGeometry(.62, 48),
-      new THREE.MeshBasicMaterial({ color: 0x17201c, transparent: true, opacity: .2, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: 0x17201c, transparent: true, opacity: .27, depthWrite: false }),
     )
     shadow.rotation.x = -Math.PI / 2
     shadow.scale.y = .42
@@ -559,6 +559,8 @@ export class QuietRoom {
         new THREE.PlaneGeometry(1.7, 1.7),
         new THREE.MeshBasicMaterial({
           map: texture,
+          // The source render is studio-bright; this warm multiplier seats it in the room's night lighting.
+          color: 0xb6aa98,
           transparent: true,
           alphaTest: .025,
           depthWrite: true,
