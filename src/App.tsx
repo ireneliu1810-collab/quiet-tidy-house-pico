@@ -108,7 +108,7 @@ export default function App() {
       <section className="hero-copy" id="room" enable-xr="true" style={spatialStyle(70)}>
         <small>NO SCORES · NO FAILURE · NO RUSH</small>
         <h1>让房间<br/><em>慢慢安静</em></h1>
-        <p>没有清单，也没有完成度。<br/>只听手边的物件，回到它们合适的位置。</p>
+        <p>没有清单，也没有完成度。<br/>听听手边的声响，让每件物品慢慢找到自己的位置。</p>
       </section>
 
       <div className={`response ${active ? 'visible' : ''}`} enable-xr="true" style={spatialStyle(112)} role="status">

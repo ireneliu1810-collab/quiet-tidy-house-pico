@@ -243,9 +243,12 @@ export class QuietRoom {
   }
 
   private buildClock(parent: THREE.Object3D) {
+    const clockRoot = new THREE.Group()
+    clockRoot.position.set(-1.0, 2.27, .18)
+    parent.add(clockRoot)
     const clock = new THREE.Group()
-    clock.position.set(-1.0, 2.35, .18)
-    parent.add(clock)
+    clock.scale.setScalar(.74)
+    clockRoot.add(clock)
     const brass = this.material(colors.brass, .32, .68)
     const body = new THREE.Mesh(new THREE.CylinderGeometry(.46, .46, .19, 48), brass)
     body.rotation.x = Math.PI / 2
@@ -270,7 +273,7 @@ export class QuietRoom {
       const foot = this.rounded([.08, .24, .1], colors.brass, [side * .27, -.43, 0], .025, .34, .65, clock)
       foot.rotation.z = side * -.18
     }
-    this.addInteractive('repair', clock)
+    this.addInteractive('repair', clockRoot)
   }
 
   private buildRecord(parent: THREE.Object3D) {
@@ -343,13 +346,36 @@ export class QuietRoom {
     const base = new THREE.Mesh(new THREE.CylinderGeometry(.3, .34, .075, 32), metal)
     base.castShadow = true
     lamp.add(base)
-    const lowerArm = this.rounded([.085, .72, .085], 0x56615a, [.13, .38, 0], .034, .42, .62, lamp)
-    lowerArm.rotation.z = -.4
-    const elbow = new THREE.Mesh(new THREE.SphereGeometry(.1, 20, 14), metal)
-    elbow.position.set(-.01, .72, 0)
+
+    const addArm = (start: THREE.Vector3, end: THREE.Vector3) => {
+      const direction = end.clone().sub(start)
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(.042, .042, direction.length(), 18), metal)
+      arm.position.copy(start).add(end).multiplyScalar(.5)
+      arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize())
+      arm.castShadow = true
+      lamp.add(arm)
+    }
+    const baseJoint = new THREE.Vector3(.08, .07, 0)
+    const elbowPoint = new THREE.Vector3(.16, .67, 0)
+    const shadeJoint = new THREE.Vector3(-.31, 1.44, 0)
+    addArm(baseJoint, elbowPoint)
+    addArm(elbowPoint, shadeJoint)
+
+    const elbow = new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .035, 20), metal)
+    elbow.position.copy(elbowPoint)
+    elbow.rotation.x = Math.PI / 2
+    elbow.castShadow = true
     lamp.add(elbow)
-    const upperArm = this.rounded([.085, .68, .085], 0x56615a, [-.2, 1.0, 0], .034, .42, .62, lamp)
-    upperArm.rotation.z = .58
+
+    const shadePivot = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, .032, 20), metal)
+    shadePivot.position.copy(shadeJoint)
+    shadePivot.rotation.x = Math.PI / 2
+    shadePivot.castShadow = true
+    lamp.add(shadePivot)
+
+    const powerButton = new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .018, 18), this.material(colors.brass, .32, .68))
+    powerButton.position.set(.17, .052, .1)
+    lamp.add(powerButton)
     const shade = new THREE.Mesh(new THREE.CylinderGeometry(.14, .36, .34, 36, 1, true), new THREE.MeshStandardMaterial({ color: 0x777c72, roughness: .48, metalness: .38, side: THREE.DoubleSide }))
     shade.position.set(-.39, 1.31, 0)
     shade.rotation.z = -.5
