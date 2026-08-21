@@ -1,7 +1,7 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.compose.compiler)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -12,8 +12,8 @@ android {
         applicationId = "com.ireneliu.jingqihome.xr"
         minSdk = 35
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters.add("arm64-v8a") }
@@ -41,21 +41,21 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(platform(libs.spatial.bom))
-    implementation(libs.spatial.core)
-    implementation(libs.spatial.ui.platform)
-    implementation(libs.spatial.ui.foundation)
-    implementation(libs.spatial.ui.design)
-    implementation(libs.spatial.ui.sense)
-    implementation(libs.spatial.ui.tracking)
-    implementation(libs.androidx.ui.tooling)
-    implementation(libs.androidx.annotation)
-    implementation(libs.androidx.appcompat)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    debugImplementation(libs.androidx.ui.tooling.preview)
+    implementation("androidx.core:core-ktx:1.13.0")
+    implementation(platform("com.pico.spatial:bom:0.13.3"))
+    implementation("com.pico.spatial.core:core")
+    implementation("com.pico.spatial.ui:platform")
+    implementation("com.pico.spatial.ui:foundation")
+    implementation("com.pico.spatial.ui:design")
+    implementation("com.pico.spatial.sense:sense")
+    implementation("com.pico.spatial.tracking:tracking")
+    implementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.annotation:annotation:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    debugImplementation("androidx.compose.ui:ui-tooling-preview")
 }
 
 configurations.all {

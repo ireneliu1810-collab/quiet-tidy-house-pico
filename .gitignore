@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.log
 outputs/*.png
+.local-android-sdk/
+.local-jdk/
+android-apk/.android-user/
+artifacts/

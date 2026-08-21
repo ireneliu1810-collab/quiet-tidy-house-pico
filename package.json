@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5190 --strictPort",
     "build": "tsc -b && vite build",
+    "build:apk-web": "tsc -b && vite build --base ./",
     "lint": "oxlint src",
     "check": "npm run build && npm run lint",
+    "sync:android-web": "./scripts/sync-android-web-assets.sh",
     "preview": "vite preview --host 127.0.0.1 --port 5190 --strictPort"
   },
   "dependencies": {
