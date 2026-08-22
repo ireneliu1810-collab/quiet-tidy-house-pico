@@ -5,5 +5,8 @@ dist
 outputs/*.png
 .local-android-sdk/
 .local-jdk/
+.local-tools/
 android-apk/.android-user/
 artifacts/
+submission-assets/icon-source.png
+submission-assets/cover-source.png
