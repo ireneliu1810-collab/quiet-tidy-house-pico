@@ -5,9 +5,15 @@ PROJECT_ROOT="${0:A:h:h}"
 ANDROID_PROJECT="$PROJECT_ROOT/android-apk"
 ARTIFACT_DIR="$PROJECT_ROOT/artifacts"
 LOG_FILE="$ARTIFACT_DIR/build-pico-apk.log"
-FINAL_APK="$ARTIFACT_DIR/静栖-PICO真机版-0.1.2.apk"
-DESKTOP_APK="/Users/luluanan/Desktop/静栖-PICO真机版-0.1.2.apk"
-JAVA_ROOT="$PROJECT_ROOT/.local-jdk/Contents/Home"
+FINAL_APK="$ARTIFACT_DIR/静栖-PICO真机版-0.1.3.apk"
+DESKTOP_APK="/Users/luluanan/Desktop/静栖-PICO真机版-0.1.3.apk"
+SYSTEM_JAVA_ROOT="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+BUNDLED_JAVA_ROOT="$PROJECT_ROOT/.local-jdk/Contents/Home"
+if [ -x "$SYSTEM_JAVA_ROOT/bin/java" ]; then
+  JAVA_ROOT="$SYSTEM_JAVA_ROOT"
+else
+  JAVA_ROOT="$BUNDLED_JAVA_ROOT"
+fi
 LOCAL_ANDROID_SDK="$PROJECT_ROOT/.local-android-sdk"
 READ_ONLY_DEP_CACHE="/Users/luluanan/.gradle/caches"
 GRADLE_BIN="/Users/luluanan/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle"

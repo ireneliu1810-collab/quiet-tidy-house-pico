@@ -2,6 +2,8 @@
 
 静栖是一款运行在 PICO 空间窗口中的无压力整理体验。雨夜小屋里没有积分、倒计时、失败或关卡，玩家可以按照自己的节奏整理书架、修复旧钟、给植物浇水、擦拭唱片、摆放收藏、收拾桌面，或轻轻抚摸正在休息的小猫。
 
+应用运行在 Progressive Stage 中，主面板之外是一圈可调沉浸度的 360° 雨夜庭院环境。
+
 ## 核心体验
 
 - 七种慢动作互动：慢推、持续按住、绕圈和轻扫，而不是单次点击完成。
@@ -40,7 +42,7 @@ Android 工程位于 android-apk/。完整构建脚本会检查前端、生成�
 
     ./scripts/build-pico-apk.command
 
-最终测试包输出为 artifacts/静栖-PICO真机版-0.1.2.apk。
+最终测试包输出为 artifacts/静栖-PICO真机版-0.1.3.apk。
 
 APK 内的网页通过 https://appassets.androidplatform.net/assets/web/ 加载，不依赖 localhost、局域网、在线服务器、file:// 或 about:blank。
 
@@ -55,4 +57,4 @@ APK 内的网页通过 https://appassets.androidplatform.net/assets/web/ 加载�
 
 ## 版本
 
-当前 APK：0.1.2（versionCode 3），包名 com.ireneliu.jingqihome.xr。
+当前 APK：0.1.3（versionCode 4），包名 com.ireneliu.jingqihome.xr。
