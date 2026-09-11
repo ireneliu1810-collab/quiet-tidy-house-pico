@@ -1,6 +1,7 @@
 package com.ireneliu.jingqihome.xr.content
 
 import android.annotation.SuppressLint
+import android.content.pm.ApplicationInfo
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
@@ -142,6 +143,9 @@ private class BundledAssetWebViewClient(context: Context) : WebViewClient() {
 fun HomePage() {
     val context = LocalContext.current
     val webView = remember(context) {
+        WebView.setWebContentsDebuggingEnabled(
+            context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        )
         WebView(context).apply {
             setBackgroundColor(Color.TRANSPARENT)
             webViewClient = BundledAssetWebViewClient(context)
