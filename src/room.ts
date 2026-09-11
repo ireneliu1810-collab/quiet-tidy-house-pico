@@ -57,6 +57,12 @@ export class QuietRoom {
 
   constructor(private canvas: HTMLCanvasElement, private onRequest: (id: ActivityId) => void) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
+    const gl = this.renderer.getContext()
+    console.info('[Jingqi] WebGL renderer created', {
+      version: gl.getParameter(gl.VERSION),
+      renderer: gl.getParameter(gl.RENDERER),
+      vendor: gl.getParameter(gl.VENDOR),
+    })
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap

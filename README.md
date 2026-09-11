@@ -20,7 +20,6 @@
 - Android / Kotlin / Jetpack Compose SpatialUI
 - Android WebView 本地安全资源域
 - React 19 / TypeScript 6 / Three.js
-- WebSpatial SDK 1.7.0
 - Vite 8 / Web Audio API
 - Android API 35 / arm64-v8a
 
@@ -41,7 +40,7 @@ Android 工程位于 android-apk/。完整构建脚本会检查前端、生成�
 
     ./scripts/build-pico-apk.command
 
-最终测试包输出为 artifacts/静栖-PICO真机版-0.1.1.apk。
+最终测试包输出为 artifacts/静栖-PICO真机版-0.1.2.apk。
 
 APK 内的网页通过 https://appassets.androidplatform.net/assets/web/ 加载，不依赖 localhost、局域网、在线服务器、file:// 或 about:blank。
 
@@ -56,4 +55,4 @@ APK 内的网页通过 https://appassets.androidplatform.net/assets/web/ 加载�
 
 ## 版本
 
-当前 APK：0.1.1（versionCode 2），包名 com.ireneliu.jingqihome.xr。
+当前 APK：0.1.2（versionCode 3），包名 com.ireneliu.jingqihome.xr。

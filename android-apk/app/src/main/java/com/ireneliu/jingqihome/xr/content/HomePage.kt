@@ -6,7 +6,10 @@ import android.graphics.Color
 import android.net.Uri
 import android.util.Log
 import android.webkit.WebChromeClient
+import android.webkit.ConsoleMessage
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -24,6 +27,16 @@ private const val TAG = "QuietHouseWebView"
 private const val APP_ASSET_HOST = "appassets.androidplatform.net"
 private const val APP_ASSET_ROOT = "/assets/web/"
 private const val APP_START_URL = "https://$APP_ASSET_HOST${APP_ASSET_ROOT}index.html"
+
+private class DiagnosticWebChromeClient : WebChromeClient() {
+    override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+        Log.i(
+            TAG,
+            "JS ${message.messageLevel()} ${message.sourceId()}:${message.lineNumber()} ${message.message()}"
+        )
+        return true
+    }
+}
 
 private class BundledAssetWebViewClient(context: Context) : WebViewClient() {
     private val assets = context.applicationContext.assets
@@ -55,6 +68,39 @@ private class BundledAssetWebViewClient(context: Context) : WebViewClient() {
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
         Log.i(TAG, "Bundled page loaded: $url")
+        view?.postDelayed({
+            view.evaluateJavascript(
+                """
+                (() => {
+                  const canvas = document.querySelector('.scene canvas');
+                  return JSON.stringify({
+                    ready: document.readyState,
+                    rootChildren: document.getElementById('root')?.childElementCount ?? -1,
+                    canvasClient: canvas ? [canvas.clientWidth, canvas.clientHeight] : null,
+                    canvasBacking: canvas ? [canvas.width, canvas.height] : null
+                  });
+                })()
+                """.trimIndent()
+            ) { result -> Log.i(TAG, "Page diagnostics: $result") }
+        }, 1200)
+    }
+
+    override fun onReceivedError(
+        view: WebView?,
+        request: WebResourceRequest?,
+        error: WebResourceError?
+    ) {
+        super.onReceivedError(view, request, error)
+        Log.e(
+            TAG,
+            "Web request failed mainFrame=${request?.isForMainFrame} url=${request?.url} " +
+                "code=${error?.errorCode} description=${error?.description}"
+        )
+    }
+
+    override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        Log.e(TAG, "WebView renderer gone crashed=${detail?.didCrash()} priority=${detail?.rendererPriorityAtExit()}")
+        return false
     }
 
     private fun Uri.toBundledAssetPath(): String? {
@@ -98,7 +144,7 @@ fun HomePage() {
         WebView(context).apply {
             setBackgroundColor(Color.TRANSPARENT)
             webViewClient = BundledAssetWebViewClient(context)
-            webChromeClient = WebChromeClient()
+            webChromeClient = DiagnosticWebChromeClient()
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = false

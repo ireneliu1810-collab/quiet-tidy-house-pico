@@ -1,16 +1,11 @@
 {
   "name": "静栖 · VR 放松整理屋",
   "short_name": "静栖",
-  "description": "没有积分、失败或关卡的 PICO WebSpatial 可交互 ASMR 整理小屋",
+  "description": "没有积分、失败或关卡的 PICO Spatial 可交互 ASMR 整理小屋",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "theme_color": "#18211d",
   "background_color": "#18211d",
-  "icons": [{ "src": "./quiet-house.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
-  "xr_spatial_scene": {
-    "default_size": { "width": "1600px", "height": "1000px" },
-    "worldScaling": "automatic",
-    "worldAlignment": "adaptive"
-  }
+  "icons": [{ "src": "./quiet-house.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

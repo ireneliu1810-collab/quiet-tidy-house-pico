@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { Spatial } from '@webspatial/core-sdk'
 import { QuietRoom, type ActivityId, type RoomEvent } from './room'
 import catSleepUrl from './assets/cat-sleep-v2.png'
 
@@ -26,39 +25,37 @@ const events: Record<ActivityId, RoomEvent> = {
   cat: { id: 'cat', label: '猫咪发出满足的呼噜声', detail: '温热的背脊在掌心下缓缓起伏。' },
 }
 
-const spatialStyle = (depth: number, material = 'thin') => ({
-  '--xr-back': `${depth}`,
-  '--xr-background-material': material,
-}) as CSSProperties
-
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const roomRef = useRef<QuietRoom | null>(null)
-  const [spatialMode, setSpatialMode] = useState(false)
   const [musicOn, setMusicOn] = useState(false)
   const [event, setEvent] = useState<RoomEvent>({ id: 'desk', label: '今晚，不必完成什么', detail: '挑一件顺手的小事，或者只是坐下来听雨。' })
   const [active, setActive] = useState<ActivityId | null>(null)
   const [ritual, setRitual] = useState<ActivityId | null>(null)
 
   useEffect(() => {
-    try { setSpatialMode(new Spatial().runInSpatialWeb()) } catch { setSpatialMode(false) }
-    if (!canvasRef.current) return
-    const room = new QuietRoom(canvasRef.current, id => setRitual(id))
-    roomRef.current = room
-    return () => room.destroy()
-  }, [])
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (spatialMode || params.get('pico-spatial-launch') !== '1') return
-    if (!/PicoBrowser|PicoWebApp/i.test(navigator.userAgent)) return
-    const target = new URL(window.location.href)
-    target.searchParams.delete('pico-spatial-launch')
-    const config = JSON.stringify({ type: 'window', defaultSize: { width: '1600px', height: '1000px' }, worldScaling: 'automatic', worldAlignment: 'adaptive' })
-    const spatialUrl = `webspatial://createSpatialScene?url=${encodeURIComponent(target.toString())}&config=${encodeURIComponent(config)}`
-    const timer = window.setTimeout(() => window.open(spatialUrl, '_blank'), 420)
-    return () => window.clearTimeout(timer)
-  }, [spatialMode])
+    const reportContextLoss = (event: Event) => {
+      event.preventDefault()
+      console.error('[Jingqi] WebGL context lost')
+    }
+    canvas.addEventListener('webglcontextlost', reportContextLoss)
+
+    try {
+      const room = new QuietRoom(canvas, id => setRitual(id))
+      roomRef.current = room
+      console.info(`[Jingqi] room ready ${canvas.clientWidth}x${canvas.clientHeight}`)
+      return () => {
+        canvas.removeEventListener('webglcontextlost', reportContextLoss)
+        room.destroy()
+      }
+    } catch (error) {
+      console.error('[Jingqi] room initialization failed', error)
+      canvas.removeEventListener('webglcontextlost', reportContextLoss)
+    }
+  }, [])
 
   const toggleMusic = () => {
     const next = !musicOn
@@ -76,13 +73,13 @@ export default function App() {
 
   return (
     <main className="app">
-      <div className="scene" enable-xr="true" style={spatialStyle(148, 'transparent')}>
+      <div className="scene">
         <canvas ref={canvasRef} aria-label="雨夜放松整理屋三维场景" />
         <div className="cinematic-light" />
         <div className="scene-shade" />
       </div>
 
-      <header className="header" enable-xr="true" style={spatialStyle(42)}>
+      <header className="header">
         <a className="identity" href="#room" aria-label="静栖放松整理屋">
           <svg className="identity-mark" viewBox="0 0 50 50" aria-hidden="true">
             <defs>
@@ -111,18 +108,18 @@ export default function App() {
         </button>
       </header>
 
-      <section className="hero-copy" id="room" enable-xr="true" style={spatialStyle(70)}>
+      <section className="hero-copy" id="room">
         <small>NO SCORES · NO FAILURE · NO RUSH</small>
         <h1>让房间<br/><em>慢慢安静</em></h1>
         <p>没有清单，也没有完成度。<br/>听听手边的声响，让每件物品慢慢找到自己的位置。</p>
       </section>
 
-      <div className={`response ${active ? 'visible' : ''}`} enable-xr="true" style={spatialStyle(112)} role="status">
+      <div className={`response ${active ? 'visible' : ''}`} role="status">
         <span>{activities.find(item => item.id === event.id)?.icon}</span>
         <p><small>THE ROOM RESPONDS</small><b>{event.label}</b><em>{event.detail}</em></p>
       </div>
 
-      <section className="ritual-dock" enable-xr="true" style={spatialStyle(92)} aria-label="整理活动">
+      <section className="ritual-dock" aria-label="整理活动">
         <div className="dock-intro"><small>CHOOSE ONE</small><b>随手做一点</b><span>随时停下也很好</span></div>
         <div className="activity-row">
           {activities.map(item => (
@@ -142,7 +139,7 @@ export default function App() {
         onGestureEnd={() => { if (ritual === 'cat') void roomRef.current?.setPetting(false) }}
       />}
 
-      <footer><span>{spatialMode ? 'PICO 空间模式' : '桌面预览'} · PORT 5190</span><p><i />选择物件后，用持续动作完成整理</p></footer>
+      <footer><span>PICO SPATIAL SDK · 本地资源</span><p><i />选择物件后，用持续动作完成整理</p></footer>
     </main>
   )
 }
